@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Dec2bin
+Comment=Number Base Converter
+Exec=/usr/bin/dec2bin
+Icon=dec2bin_icon
+Terminal=false
+Type=Application
+Categories=Utility;Application;
+StartupNotify=true

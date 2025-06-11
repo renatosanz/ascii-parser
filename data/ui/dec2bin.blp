@@ -1,0 +1,96 @@
+using Gtk 4.0;
+
+Window dec2bin_win{
+  title:"dec2bin";
+  resizable:false;
+
+  [titlebar]
+  HeaderBar {
+
+    [end]
+    MenuButton about_btn{
+      tooltip-text:"about";
+      Image{
+        icon-name:"view-more-horizontal-symbolic";
+      }
+      popover:Popover{
+        Box{
+          orientation:vertical;
+          spacing:12;
+
+          Button about_display_btn{
+            label:"About";
+          }
+          Button close_btn{
+            label:"Close";
+            css-classes:["destructive-action"];
+          }
+        }
+      };
+    }  
+  }
+
+  Box {
+    margin-top:12;
+    margin-bottom:12;
+    margin-start:12;
+    margin-end:12;
+    spacing:12;
+
+    orientation: vertical;
+
+    Box{
+      spacing:12;
+      Label{
+        label:"Base converter";
+        css-classes:["title-3"];
+        xalign:0;
+      }
+      
+      DropDown base_one{
+        hexpand:true;
+        model:StringList{
+          strings:["decimal","binary","octal","hex"];
+        };
+      }
+
+      DropDown base_two{
+        hexpand:true;
+        model:StringList{
+          strings:["decimal","binary","octal","hex"];
+        };
+      }
+    }
+
+    Box {
+      spacing:12;
+      hexpand:true;
+
+      Entry entry_left{
+        hexpand:true;
+        placeholder-text:"base";
+      }
+
+      Button switch_base_btn{
+        tooltip-text:"about";
+        Image{
+          resource:"/org/dec2bin/data/icons/arrows-loop-symbolic.svg";
+        }
+      }
+
+      Entry entry_right{
+        hexpand:true;
+        placeholder-text:"base";
+      }
+    }
+    
+    Box {
+      spacing:12;
+
+      Button clean_btn{
+        label:"Clean";
+        css-classes:["suggested-action"];
+      }
+    }
+  }
+}

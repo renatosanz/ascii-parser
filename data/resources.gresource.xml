@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/dec2bin">
+    <!-- Archivos UI -->
+    <file preprocess="xml-stripblanks">data/ui/dec2bin.ui</file>
+    <file preprocess="xml-stripblanks">data/icons/arrows-loop-symbolic.svg</file>
+    <!-- <file preprocess="xml-stripblanks">ui/preferences.ui</file> -->
+    <!-- Otros recursos (opcional) -->
+    <!-- <file>css/estilos.css</file> -->
+    <file preprocess="to-pixdata">icons/dec2bin.png</file>
+  </gresource>
+</gresources>
