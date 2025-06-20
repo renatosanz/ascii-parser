@@ -96,3 +96,4 @@ The parser uses the following character gradient for density representation:
 ## License
 
 GPL-3.0-or-later
+# ascii-parser
