@@ -3,6 +3,12 @@
 #include <stdint.h>
 #include "stb/stb_truetype.h"
 
+typedef struct {
+  uint8_t  *data;
+  size_t size;
+} JPGMemoryBuffer;
+
+
 /*
  * @brief Renders ASCII art to a PNG image
  * @param output_filename Base output filename
@@ -19,7 +25,7 @@
  */
 int renderAsciiPNG(char *output_filename, uint8_t *rgb_image, int w, int h,
                    int w_step, int h_step, int channels, int output_w,
-                   int output_h, unsigned char *ascii_colors) ;
+                   int output_h, unsigned char *ascii_colors, uint8_t bg_color) ;
 
 /*
  * @brief Load a stb_truetype font
@@ -38,6 +44,6 @@ int load_font(char *font_filename, unsigned char *font_buffer,   stbtt_fontinfo 
  */
 int get_text_from_file(char *filename, char **full_content) ;
 
-
-
 char switch_to_render_char(char *c);
+
+void jpg_write_to_memory(void *context, void *data, int size); 

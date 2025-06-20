@@ -15,6 +15,7 @@
 
 #include <logic.h>
 #include <render.h>
+#include <utils.h>
 
 // Global application and window references
 GtkApplication *app;
@@ -70,20 +71,23 @@ int main(int argc, char **argv) {
   char *input_file = NULL, *output_file = NULL;
   uint8_t *rgb_image = NULL;
   unsigned char *ascii_colors = NULL;
-  int verbose = 0, help_flag = 0, render = 0, auto_flag = 0;
+  int verbose = 0, help_flag = 0, render = 0, auto_flag = 0, no_jpeg_flag = 0;
+  uint8_t bg_color_render = 0;
+
+  JPGMemoryBuffer jpg_buffer = {0};
 
   // Define command line options
   static struct option long_options[] = {{"input", required_argument, 0, 'i'},
                                          {"output", required_argument, 0, 'o'},
+                                         {"render", required_argument, 0, 'r'},
                                          {"verbose", no_argument, 0, 'v'},
                                          {"auto", no_argument, 0, 'a'},
                                          {"help", no_argument, 0, 'h'},
-                                         {"renderimage", no_argument, 0, 'r'},
                                          {0, 0, 0, 0}};
 
   // Parse command line arguments
   int opt;
-  while ((opt = getopt_long(argc, argv, "i:o:vhra", long_options, NULL)) !=
+  while ((opt = getopt_long(argc, argv, "i:o:r:vha", long_options, NULL)) !=
          -1) {
     switch (opt) {
     case 'i':
@@ -101,6 +105,15 @@ int main(int argc, char **argv) {
       break;
     case 'r':
       render = 1;
+      if (!strcmp(optarg, "black")) {
+        bg_color_render = 0;
+      } else if (!strcmp(optarg, "white")) {
+        bg_color_render = 255;
+      } else {
+        printf("-r, --render determines the background color.\n");
+        printf("And just can take two values : black - white\n");
+        return EXIT_FAILURE;
+      }
       break;
     case 'h':
       help_flag = 1;
@@ -110,7 +123,8 @@ int main(int argc, char **argv) {
       printf("  $ ascii-parser filename.png output.txt 300 200 --render\n");
       printf("  $ ascii-parser filename.png output.txt 40 --render\n");
       printf("Flags:\n");
-      printf(" -r, --renderimage : Generate colored PNG of ASCII art\n");
+      printf(
+          " -r, --render= black | white : Generate colored PNG of ASCII art\n");
       return 1;
     default:
       fprintf(stderr, "Argument processing error\n");
@@ -145,7 +159,7 @@ int main(int argc, char **argv) {
   }
 
   // Load image data
-  rgb_image = stbi_load(input_file, &img_width, &img_height, &img_bpp, 3);
+  rgb_image = stbi_load(input_file, &img_width, &img_height, &img_bpp, 0);
   if (verbose) {
     printf("Image dimensions: %dx%d, BPP: %d\n", img_width, img_height,
            img_bpp);
@@ -195,7 +209,7 @@ int main(int argc, char **argv) {
     if (render) {
       renderAsciiPNG(output_file, rgb_image, img_width, img_height,
                      img_width / out_w, img_height / out_h, img_bpp, out_w,
-                     out_h, ascii_colors);
+                     out_h, ascii_colors, bg_color_render);
       printf("PNG rendering complete\n");
     }
     free(ascii_colors);
@@ -206,6 +220,9 @@ int main(int argc, char **argv) {
   }
 
   // Cleanup
+  if (no_jpeg_flag) {
+    free(jpg_buffer.data);
+  }
   stbi_image_free(rgb_image);
   return EXIT_SUCCESS;
 }

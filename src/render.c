@@ -26,7 +26,8 @@
  */
 int renderAsciiPNG(char *output_filename, uint8_t *rgb_image, int w, int h,
                    int w_step, int h_step, int channels, int output_w,
-                   int output_h, unsigned char *ascii_colors) {
+                   int output_h, unsigned char *ascii_colors,
+                   uint8_t bg_color) {
   // creare the img data
   float char_h = 32.0f;
   float char_w = char_h / 2;
@@ -38,7 +39,7 @@ int renderAsciiPNG(char *output_filename, uint8_t *rgb_image, int w, int h,
     printf("Error: Failed to allocate pixel buffer\n");
     return 1;
   }
-  memset(pixels, 0, width * height * 3);
+  memset(pixels, bg_color, width * height * 3);
 
   // load font file
   unsigned char *font_buffer = NULL;
@@ -93,7 +94,7 @@ int renderAsciiPNG(char *output_filename, uint8_t *rgb_image, int w, int h,
     stbtt_MakeCodepointBitmap(&font, bitmap, x1 - x0, y1 - y0, x1 - x0, scale,
                               scale, render_char);
 
-    // Draw character with ASCII colors
+    // draw character with ascii colors
     for (int dy = 0; dy < y1 - y0; dy++) {
       for (int dx = 0; dx < x1 - x0; dx++) {
         int pos_pixel = ((y + y0 + dy) * width + (x + x0 + dx)) * 3;
@@ -102,6 +103,11 @@ int renderAsciiPNG(char *output_filename, uint8_t *rgb_image, int w, int h,
           pixels[pos_pixel] = ascii_colors[counter * 3];
           pixels[pos_pixel + 1] = ascii_colors[counter * 3 + 1];
           pixels[pos_pixel + 2] = ascii_colors[counter * 3 + 2];
+        } else if (bitmap[dy * (x1 - x0) + dx] == 0 &&
+                   counter < output_w * output_h) {
+          pixels[pos_pixel] = bg_color;
+          pixels[pos_pixel + 1] = bg_color;
+          pixels[pos_pixel + 2] = bg_color;
         }
       }
     }
@@ -110,7 +116,7 @@ int renderAsciiPNG(char *output_filename, uint8_t *rgb_image, int w, int h,
     counter++;
   }
 
-  // Save PNG
+  // save to png
   char png_filename[256];
   snprintf(png_filename, sizeof(png_filename), "%s.png", output_filename);
   if (!stbi_write_png(png_filename, width, height, 3, pixels, width * 3)) {
@@ -253,4 +259,12 @@ int get_text_from_file(char *filename, char **full_content) {
     printf("Error: Failed to open text file\n");
     return 1;
   }
+}
+
+// Callback para escribir JPG en memoria
+void jpg_write_to_memory(void *context, void *data, int size) {
+  JPGMemoryBuffer *buffer = (JPGMemoryBuffer *)context;
+  buffer->data = realloc(buffer->data, buffer->size + size);
+  memcpy(buffer->data + buffer->size, data, size);
+  buffer->size += size;
 }

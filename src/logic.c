@@ -35,10 +35,18 @@ int parse2file(char *output_filename, uint8_t *rgb_image, int width, int height,
   for (int y = 0; y < height; y += h_step) {
     for (int x = 0; x < width; x += w_step) {
       size_t index = (y * width + x) * channels;
-      unsigned char r = rgb_image[index];
-      unsigned char g = rgb_image[index + 1];
-      unsigned char b = rgb_image[index + 2];
-
+      unsigned char r;
+      unsigned char g;
+      unsigned char b;
+      if (rgb_image[index] && rgb_image[index + 1] && rgb_image[index + 2]) {
+        r = rgb_image[index];
+        g = rgb_image[index + 1];
+        b = rgb_image[index + 2];
+      } else {
+        r = 0;
+        g = 0;
+        b = 0;
+      }
       int intensity = (r + g + b) / 3;
       int gradient_index = (intensity * (num_chars - 1)) / 255;
       fprintf(asciifile, "%c", gradient[gradient_index]);
