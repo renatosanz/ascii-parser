@@ -83,7 +83,7 @@ This parser uses the following two character gradients for density representatio
 
 For rendering the PNG image:
 ```c
-{'@', 'M', 'W', 'B', 'R', 'N', 'Q', 'D', 'G', 'O', 'U', 'S', 'V', 'Z', ':', ' '}
+{'$', '&', '8', 'W', 'M', 'B', '@', '%','#', '*', '+', '=', '-', ':', '.', ' '}
 ```
 
 For the .txt output file:
