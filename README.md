@@ -1,12 +1,12 @@
 # asciiParser
 
-A JPEG image parser that converts images to ASCII characters, capable of generating both text files and rendered PNG images.
+A image parser that converts images to ASCII characters, capable of generating both text files and rendered PNG images. Image formats supported (JPEG, PNG, WebP, BMP) 
 
-> Note: For other image formats (PNG, WebP, BMP), please convert them to JPEG first.
+> NOTE: to get better results is prefered to convert the input image to JPEG format, this 'cause some PNG or image formats within transparency pixels may generate 
 
 ## Features
 
-- Convert JPEG images to ASCII art
+- Convert images to ASCII art
 - Generate text files with ASCII output
 - Render ASCII art back to PNG images
 - Adjustable output resolution
@@ -79,8 +79,14 @@ xdg-open examples/shoe.txt.png
 
 ## Character Gradient
 
-The parser uses the following character gradient for density representation:
+This parser uses the following two character gradients for density representation in different cases:
 
+For rendering the PNG image:
+```c
+{'@', 'M', 'W', 'B', 'R', 'N', 'Q', 'D', 'G', 'O', 'U', 'S', 'V', 'Z', ':', ' '}
+```
+
+For the .txt output file:
 ```c
 {'@', 'M', 'W', 'B', 'R', 'N', 'Q', 'D', 'G', 'O', 'U', 'S', 'V', 'Z', ':', ' '}
 ```
