@@ -1,4 +1,4 @@
-8# asciiParser
+# ascii-parser
 
 A image parser that converts images to ASCII characters, capable of generating both text files and rendered PNG images. Image formats supported (JPEG, PNG, WebP, BMP) 
 
