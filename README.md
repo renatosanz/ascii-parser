@@ -1,4 +1,4 @@
-# asciiParser
+8# asciiParser
 
 A image parser that converts images to ASCII characters, capable of generating both text files and rendered PNG images. Image formats supported (JPEG, PNG, WebP, BMP) 
 
@@ -98,7 +98,7 @@ For the .txt output file:
 
 ## Extras
 
-This project uses the following modules from the (stb libraries)[https://github.com/nothings/stb?tab=readme-ov-file]:
+This project uses the following modules from the [stb libraries](https://github.com/nothings/stb?tab=readme-ov-file):
 
 - stb_image.h
 - stb_image_write.h
