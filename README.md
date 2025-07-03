@@ -95,6 +95,11 @@ For the .txt output file:
 
 - meson
 - C compiler (gcc/clang)
+
+## Extras
+
+This project uses the following modules from the (stb libraries)[https://github.com/nothings/stb?tab=readme-ov-file]:
+
 - stb_image.h
 - stb_image_write.h
 - stb_truetype.h
