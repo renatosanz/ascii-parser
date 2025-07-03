@@ -2,7 +2,7 @@
 
 A image parser that converts images to ASCII characters, capable of generating both text files and rendered PNG images. Image formats supported (JPEG, PNG, WebP, BMP) 
 
-> NOTE: to get better results is prefered to convert the input image to JPEG format, this 'cause some PNG or image formats within transparency pixels may generate 
+> NOTE: to get better results is prefered to convert the input image to JPEG format, this 'cause some PNG or image formats within transparency pixels may generate bugs.
 
 ## Features
 
@@ -101,5 +101,4 @@ For the .txt output file:
 
 ## License
 
-GPL-3.0-or-later
-# ascii-parser
+CC BY-NC 4.0
