@@ -1,5 +1,7 @@
 # ascii-parser
 
+![Banner](banner_ascii-parser.png)
+
 A image parser that converts images to ASCII characters, capable of generating both text files and rendered PNG images. Image formats supported (JPEG, PNG, WebP, BMP) 
 
 > NOTE: to get better results is prefered to convert the input image to JPEG format, this 'cause some PNG or image formats within transparency pixels may generate bugs.
