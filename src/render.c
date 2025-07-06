@@ -1,3 +1,4 @@
+#include <gio/gio.h>
 #include <glib.h>
 #include <gmodule.h>
 #include <ncurses.h>
@@ -45,6 +46,7 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
   unsigned char *pixels = malloc(width * height * 3);
   if (!pixels) {
     printf("Error: Failed to allocate pixel buffer\n");
+    pixels = NULL;
     return 1;
   }
   memset(pixels, bg_color, width * height * 3);
@@ -60,24 +62,32 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
     return EXIT_FAILURE;
   }
 
-  // read ASCII content
+  // read ASCII content from the output text file
   char *fcontent = NULL;
   int res = get_text_from_file(output_filename, &fcontent);
   if (res) {
+    // free up memory and set NULL the pointers
+    // as good programming practices
     free(font_buffer);
     free(pixels);
+    font_buffer = NULL;
+    pixels = NULL;
     return EXIT_FAILURE;
   }
 
   // render text
   const char *text = fcontent;
-  float scale = stbtt_ScaleForPixelHeight(&font, char_h);
-  int x = 0, y = 0;
+  float scale = stbtt_ScaleForPixelHeight(&font, char_h); // set the font size
 
+  // variables to locate the x,y position of each char in the image
+  int x = 0, y = 0;
+  // metrics of the font
   int ascent, descent, line_gap;
   stbtt_GetFontVMetrics(&font, &ascent, &descent, &line_gap);
   y += (int)(ascent * scale);
 
+  // for every char, draw it inside the image in the x,y position and then add
+  // enought space to the next char
   int counter = 0;
   for (const char *c = text; *c; c++) {
     if (*c == '\n') {
@@ -99,6 +109,9 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
       free(fcontent);
       free(font_buffer);
       free(pixels);
+      pixels = NULL;
+      font_buffer = NULL;
+      fcontent = NULL;
       return 1;
     }
 
@@ -108,21 +121,27 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
     // draw character with ascii colors
     for (int dy = 0; dy < y1 - y0; dy++) {
       for (int dx = 0; dx < x1 - x0; dx++) {
-        int pos_pixel = ((y + y0 + dy) * width + (x + x0 + dx)) * 3;
-        if (bitmap[dy * (x1 - x0) + dx] == 255 &&
-            counter < output_w * output_h) {
-          pixels[pos_pixel] = ascii_colors[counter * 3];
-          pixels[pos_pixel + 1] = ascii_colors[counter * 3 + 1];
-          pixels[pos_pixel + 2] = ascii_colors[counter * 3 + 2];
-        } else if (bitmap[dy * (x1 - x0) + dx] == 0 &&
-                   counter < output_w * output_h) {
-          pixels[pos_pixel] = bg_color;
-          pixels[pos_pixel + 1] = bg_color;
-          pixels[pos_pixel + 2] = bg_color;
+        int pixel_y = height - 1 - (y + y0 + dy);
+        int pixel_x = x + x0 + dx;
+
+        if (pixel_y >= 0 && pixel_y < height && pixel_x >= 0 &&
+            pixel_x < width) {
+          int pos_pixel = (pixel_y * width + pixel_x) * 3;
+          if (bitmap[dy * (x1 - x0) + dx] == 255 &&
+              counter < output_w * output_h) {
+            pixels[pos_pixel] = ascii_colors[counter * 3];
+            pixels[pos_pixel + 1] = ascii_colors[counter * 3 + 1];
+            pixels[pos_pixel + 2] = ascii_colors[counter * 3 + 2];
+          } else if (bitmap[dy * (x1 - x0) + dx] == 0 &&
+                     counter < output_w * output_h) {
+            pixels[pos_pixel] = bg_color;
+            pixels[pos_pixel + 1] = bg_color;
+            pixels[pos_pixel + 2] = bg_color;
+          }
         }
       }
     }
-    free(bitmap);
+    free(bitmap); // clean up the bitmap data
     x += (int)(advance * scale);
     counter++;
   }
@@ -138,17 +157,19 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
   free(fcontent);
   free(font_buffer);
   free(pixels);
+  pixels = NULL;
+  font_buffer = NULL;
+  fcontent = NULL;
 
-  printf("Image generated: %s\n", png_filename);
+  printf("Image rendered: %s\n", png_filename);
   return 0;
 }
 
-#include <gio/gio.h>
-#include <glib.h>
-
+// load a font from gresources by its filepath and save it in the font_buffer
+// variable
 int load_font(const char *font_resource_path, unsigned char **font_buffer,
               stbtt_fontinfo *font) {
-  // Cargar el recurso de la fuente
+  // check if the font exists embembed in gresources
   GBytes *font_data = g_resources_lookup_data(
       font_resource_path, G_RESOURCE_LOOKUP_FLAGS_NONE, NULL);
   if (!font_data) {
@@ -157,11 +178,11 @@ int load_font(const char *font_resource_path, unsigned char **font_buffer,
     return 1;
   }
 
-  // Obtener los datos de la fuente
+  // get the font data from gresources
   gsize font_size = 0;
   *font_buffer = (unsigned char *)g_bytes_get_data(font_data, &font_size);
 
-  // Hacer una copia de los datos ya que GBytes podría ser liberado
+  // copy the font data to free up the GBytes data
   *font_buffer = malloc(font_size);
   if (!*font_buffer) {
     printf("Error: Failed to allocate font buffer\n");
@@ -170,10 +191,10 @@ int load_font(const char *font_resource_path, unsigned char **font_buffer,
   }
   memcpy(*font_buffer, g_bytes_get_data(font_data, NULL), font_size);
 
-  // Liberar el GBytes ya que hemos hecho nuestra copia
+  // free up GBytes
   g_bytes_unref(font_data);
 
-  // Inicializar la fuente
+  // init  the font with stb
   if (!stbtt_InitFont(font, *font_buffer, 0)) {
     printf("Error: Failed to initialize font\n");
     free(*font_buffer);
@@ -184,11 +205,12 @@ int load_font(const char *font_resource_path, unsigned char **font_buffer,
   return 0;
 }
 
-char switch_to_render_char(char *c) {
-
-  char render_gradient[] = {'$', '&', '8', 'W', 'M', 'B', '@', '%',
-                            '#', '*', '+', '=', '-', ':', '.', ' '};
-
+// for render the image I decided to use a different scale of chars, so this
+// function executes the switch between the gradient of the text file and the
+// image gradient, for more info please check the README.md file
+static char switch_to_render_char(char *c) {
+  static char render_gradient[] = {'$', '&', '8', 'W', 'M', 'B', '@', '%',
+                                   '#', '*', '+', '=', '-', ':', '.', ' '};
   switch (*c) {
   case '@':
     return render_gradient[0];
@@ -245,7 +267,8 @@ char switch_to_render_char(char *c) {
   }
 }
 
-int get_text_from_file(char *filename, char **full_content) {
+// extract all the text from a given filename
+static int get_text_from_file(char *filename, char **full_content) {
   long fsize = 0;
   FILE *fp = fopen(filename, "r");
   if (fp) {
@@ -276,7 +299,8 @@ int get_text_from_file(char *filename, char **full_content) {
   }
 }
 
-// display a ncurses menu to select a font and bg color
+// display a ncurses menu to select a font and
+// bg color, only if rendering is enabled
 void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
   static char *font_options[NUM_FONTS] = {
       "CascadiaCodeNF-Bold.ttf",
@@ -289,7 +313,7 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
       "JetBrainsMonoNL-Regular.ttf",
   };
 
-  static char *bgcolors_options[NUM_FONTS] = {"white", "black"};
+  static char *bgcolors_options[2] = {"white", "black"};
 
   initscr();            // init screen to use ncurses
   cbreak();             // enable realtime char access
@@ -329,7 +353,6 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
     key = getch();
 
     if (key == 10) {
-      // font_family = font_options[opt];
       strcpy(font_family, font_options[opt]);
       mvprintw(3, (COLS - 10) / 2, "%s", font_family);
 
@@ -347,15 +370,16 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
     }
   }
 
+  int tmp_length_ff = strlen(font_family);
   opt = 0;
 
   while (1) {
     clear();
 
-    mvprintw(2, (COLS - 10) / 2, "font selected: %s", font_family);
-    mvprintw(3, (COLS - 10) / 2, "Select a background color:");
+    mvprintw(2, (COLS - (tmp_length_ff + 15)) / 2, "Font selected: %s",
+             font_family);
+    mvprintw(3, (COLS - 26) / 2, "Select a background color:");
 
-    // Dibujar opciones
     for (int i = 0; i < 2; i++) {
       if (i == opt) {
         attron(COLOR_PAIR(1) | A_BOLD);
@@ -386,8 +410,11 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
       } else {
         *bg_color_render = 255;
       }
-      mvprintw(6, (COLS - 10) / 2, "%s - %d", bgcolors_options[opt],
-               *bg_color_render);
+      mvprintw(10, (COLS - 13 - strlen(font_family)) / 2, "font family: %s",
+               font_family);
+      mvprintw(11, (COLS - 18 - strlen(bgcolors_options[opt])) / 2,
+               "background color: %s", bgcolors_options[opt]);
+      mvprintw(12, (COLS - 25) / 2, "PRESS ANY KEY TO CONTINUE");
 
       refresh();
       getch();
@@ -396,5 +423,4 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
   }
 
   endwin();
-  // printf("\n%s - %d\n", font_family, *bg_color_render);
 }

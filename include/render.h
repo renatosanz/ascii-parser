@@ -33,7 +33,7 @@ int load_font(const char *font_resource_path, unsigned char **font_buffer,
  * @param full_content pointer referencing the all the text from file
  * @return 0 on success, 1 on failure
  */
-int get_text_from_file(char *filename, char **full_content) ;
+static int get_text_from_file(char *filename, char **full_content) ;
 
-char switch_to_render_char(char *c);
+static char switch_to_render_char(char *c);
 void displayRenderMenu(uint8_t *bg_color_render, char *font_family);
