@@ -18,8 +18,14 @@ A image parser that converts images to ASCII characters, capable of generating b
 
 ### Build from Source
 
+
+For test it: 
 ```bash
 meson setup --wipe build && meson compile -C build
+```
+For installation: 
+```bash
+meson setup --wipe build && meson install -C build
 ```
 
 ## Usage
@@ -53,31 +59,50 @@ xdg-open examples/shoe.txt.png
   ascii-parser -i input.jpg -o output.txt 40 20
   ```
   (40 columns wide, 20 rows tall)
+> NOTE: the user must supply a width and height values that should be around the 2% and 15% of the input image original size, higher values are forbiden.
+
 
 ## Examples
 
 1. **Basic conversion**:
 
    ```bash
-   ascii-parser -i photo.jpg -o art.txt
+   ascii-parser -i photo.jpg -o art.txt # just for generating the .txt file
    ```
 
 2. **With automatic sizing**:
 
    ```bash
-   ascii-parser -i photo.jpg -o art.txt -a
+   ascii-parser -i photo.jpg -o art.txt -a # automatic sizing and output a .txt file
    ```
 
 3. **With PNG rendering**:
 
    ```bash
-   ascii-parser -i photo.jpg -o art.txt -r
+   ascii-parser -i photo.jpg -o art.txt 40 40 -r # will display a terminal menu for font & bgcolor selection, then will render a png image with de ascii art colorized of 40x40 chars.
    ```
+   Menu for font and background color selection:
+   ![menu](menu-ascii-parser.png)
 
 4. **Verbose output**:
    ```bash
-   ascii-parser -i photo.jpg -o art.txt -v
+   ascii-parser -i photo.jpg -o art.txt -v # for more information of the parsing and rendering
    ```
+
+## Fonts 
+
+The fonts currtently availible are the following, all comes embedded in the executable binary:
+
+- CascadiaCodeNF-Bold.ttf            
+- CascadiaCodeNF-Regular.ttf         
+- FiraCode-Bold.ttf                
+- FiraCode-Regular.ttf               
+- Hack-Bold.ttf                      
+- Hack-Regular.ttf                   
+- Inter-Bold.otf (on work soon)                    
+- Inter-Regular.otf (on work soon)          
+- JetBrainsMonoNL-Bold.ttf           
+- JetBrainsMonoNL-Regular.ttf  
 
 ## Character Gradient
 
@@ -97,6 +122,8 @@ For the .txt output file:
 
 - meson
 - C compiler (gcc/clang)
+- gkt4 (for embedded fonts)
+- ncurses
 
 ## Extras
 
