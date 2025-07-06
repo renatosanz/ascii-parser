@@ -1,8 +1,11 @@
+#include <glib.h>
+#include <gmodule.h>
+#include <ncurses.h>
+#include <render.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <render.h>
+#include <string.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb/stb_truetype.h"
@@ -10,6 +13,9 @@
 #include "stb/stb_image_write.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
+
+#define NUM_FONTS 8
+
 /**
  * @brief Renders ASCII art to a PNG image
  * @param output_filename Base output filename
@@ -24,15 +30,17 @@
  * @param ascii_colors Color data for ASCII chars
  * @return 0 on success, 1 on failure
  */
-int renderAsciiPNG(char *output_filename, uint8_t *rgb_image, int w, int h,
-                   int w_step, int h_step, int channels, int output_w,
-                   int output_h, unsigned char *ascii_colors,
-                   uint8_t bg_color) {
+int renderAsciiPNG(char *output_filename, int output_w, int output_h,
+                   unsigned char *ascii_colors, uint8_t bg_color,
+                   char *font_name) {
   // creare the img data
   float char_h = 32.0f;
   float char_w = char_h / 2;
   int width = output_w * char_w;
   int height = output_h * char_h;
+
+  char font_file[] = "/org/asciiparser/data/fonts/";
+  strcat(font_file, font_name);
 
   unsigned char *pixels = malloc(width * height * 3);
   if (!pixels) {
@@ -44,8 +52,11 @@ int renderAsciiPNG(char *output_filename, uint8_t *rgb_image, int w, int h,
   // load font file
   unsigned char *font_buffer = NULL;
   stbtt_fontinfo font;
-  if (load_font("MesloLGS-NF-Bold.ttf", font_buffer, &font)) {
+
+  if (load_font(font_file, &font_buffer, &font)) {
     free(pixels);
+    pixels = NULL;
+    printf("error loading font\n");
     return EXIT_FAILURE;
   }
 
@@ -132,40 +143,44 @@ int renderAsciiPNG(char *output_filename, uint8_t *rgb_image, int w, int h,
   return 0;
 }
 
-int load_font(char *font_filename, unsigned char *font_buffer,
+#include <gio/gio.h>
+#include <glib.h>
+
+int load_font(const char *font_resource_path, unsigned char **font_buffer,
               stbtt_fontinfo *font) {
-  long font_size;
-  FILE *font_file = fopen(font_filename, "rb");
-  if (!font_file) {
-    printf("Error: Failed to load font file\n");
+  // Cargar el recurso de la fuente
+  GBytes *font_data = g_resources_lookup_data(
+      font_resource_path, G_RESOURCE_LOOKUP_FLAGS_NONE, NULL);
+  if (!font_data) {
+    printf("Error: Failed to load font resource at path '%s'\n",
+           font_resource_path);
     return 1;
   }
 
-  fseek(font_file, 0, SEEK_END);
-  font_size = ftell(font_file);
-  fseek(font_file, 0, SEEK_SET);
+  // Obtener los datos de la fuente
+  gsize font_size = 0;
+  *font_buffer = (unsigned char *)g_bytes_get_data(font_data, &font_size);
 
-  font_buffer = malloc(font_size);
-  if (!font_buffer) {
+  // Hacer una copia de los datos ya que GBytes podría ser liberado
+  *font_buffer = malloc(font_size);
+  if (!*font_buffer) {
     printf("Error: Failed to allocate font buffer\n");
-    fclose(font_file);
+    g_bytes_unref(font_data);
     return 1;
   }
+  memcpy(*font_buffer, g_bytes_get_data(font_data, NULL), font_size);
 
-  if (fread(font_buffer, 1, font_size, font_file) != font_size) {
-    printf("Error: Failed to read font file\n");
-    fclose(font_file);
-    free(font_buffer);
-    return 1;
-  }
-  fclose(font_file);
+  // Liberar el GBytes ya que hemos hecho nuestra copia
+  g_bytes_unref(font_data);
 
-  // Initialize font
-  if (!stbtt_InitFont(font, font_buffer, 0)) {
+  // Inicializar la fuente
+  if (!stbtt_InitFont(font, *font_buffer, 0)) {
     printf("Error: Failed to initialize font\n");
-    free(font_buffer);
+    free(*font_buffer);
+    *font_buffer = NULL;
     return 1;
   }
+
   return 0;
 }
 
@@ -261,10 +276,125 @@ int get_text_from_file(char *filename, char **full_content) {
   }
 }
 
-// Callback para escribir JPG en memoria
-void jpg_write_to_memory(void *context, void *data, int size) {
-  JPGMemoryBuffer *buffer = (JPGMemoryBuffer *)context;
-  buffer->data = realloc(buffer->data, buffer->size + size);
-  memcpy(buffer->data + buffer->size, data, size);
-  buffer->size += size;
+// display a ncurses menu to select a font and bg color
+void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
+  static char *font_options[NUM_FONTS] = {
+      "CascadiaCodeNF-Bold.ttf",
+      "CascadiaCodeNF-Regular.ttf",
+      "FiraCode-Bold.ttf",
+      "FiraCode-Regular.ttf",
+      "Hack-Bold.ttf",
+      "Hack-Regular.ttf",
+      "JetBrainsMonoNL-Bold.ttf",
+      "JetBrainsMonoNL-Regular.ttf",
+  };
+
+  static char *bgcolors_options[NUM_FONTS] = {"white", "black"};
+
+  initscr();            // init screen to use ncurses
+  cbreak();             // enable realtime char access
+  noecho();             // disable input chars display
+  keypad(stdscr, TRUE); // enable special keys
+  curs_set(0);          // hide cursor
+
+  // verify if the terminal performs colors
+  if (has_colors()) {
+    start_color();
+    init_pair(1, COLOR_WHITE, COLOR_BLUE);
+    init_pair(2, COLOR_BLACK, COLOR_WHITE);
+  }
+
+  int opt = 0;
+  int key;
+
+  while (1) {
+    clear();
+
+    mvprintw(2, (COLS - 10) / 2, "Select a font:");
+
+    for (int i = 0; i < NUM_FONTS; i++) {
+      if (i == opt) {
+        attron(COLOR_PAIR(1) | A_BOLD);
+        mvprintw(5 + i, (COLS - strlen(font_options[i])) / 2, "%s",
+                 font_options[i]);
+        attroff(COLOR_PAIR(1) | A_BOLD);
+      } else {
+        attron(COLOR_PAIR(2));
+        mvprintw(5 + i, (COLS - strlen(font_options[i])) / 2, "%s",
+                 font_options[i]);
+        attroff(COLOR_PAIR(2));
+      }
+    }
+
+    key = getch();
+
+    if (key == 10) {
+      // font_family = font_options[opt];
+      strcpy(font_family, font_options[opt]);
+      mvprintw(3, (COLS - 10) / 2, "%s", font_family);
+
+      refresh();
+      break;
+    } else {
+      switch (key) {
+      case KEY_UP:
+        opt = (opt > 0) ? opt - 1 : NUM_FONTS - 1;
+        break;
+      case KEY_DOWN:
+        opt = (opt < NUM_FONTS - 1) ? opt + 1 : 0;
+        break;
+      }
+    }
+  }
+
+  opt = 0;
+
+  while (1) {
+    clear();
+
+    mvprintw(2, (COLS - 10) / 2, "font selected: %s", font_family);
+    mvprintw(3, (COLS - 10) / 2, "Select a background color:");
+
+    // Dibujar opciones
+    for (int i = 0; i < 2; i++) {
+      if (i == opt) {
+        attron(COLOR_PAIR(1) | A_BOLD);
+        mvprintw(5 + i, (COLS - strlen(bgcolors_options[i])) / 2, "%s",
+                 bgcolors_options[i]);
+        attroff(COLOR_PAIR(1) | A_BOLD);
+      } else {
+        attron(COLOR_PAIR(2));
+        mvprintw(5 + i, (COLS - strlen(bgcolors_options[i])) / 2, "%s",
+                 bgcolors_options[i]);
+        attroff(COLOR_PAIR(2));
+      }
+    }
+
+    key = getch();
+
+    switch (key) {
+    case KEY_UP:
+      opt = (opt > 0) ? opt - 1 : 2 - 1;
+      break;
+    case KEY_DOWN:
+      opt = (opt < 2 - 1) ? opt + 1 : 0;
+      break;
+    }
+    if (key == 10) {
+      if (!strcmp(bgcolors_options[opt], "black")) {
+        *bg_color_render = 0;
+      } else {
+        *bg_color_render = 255;
+      }
+      mvprintw(6, (COLS - 10) / 2, "%s - %d", bgcolors_options[opt],
+               *bg_color_render);
+
+      refresh();
+      getch();
+      break;
+    }
+  }
+
+  endwin();
+  // printf("\n%s - %d\n", font_family, *bg_color_render);
 }
