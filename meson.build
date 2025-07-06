@@ -14,6 +14,7 @@ project(
 src_dir = 'src'
 data_dir = 'data'
 include_dir = include_directories('include')
+ncurses= dependency('ncurses', required : true)
 
 # Dependencias
 gtk4 = dependency('gtk4')
@@ -60,7 +61,7 @@ executable(
   sources,
   resources,
   include_directories: include_dir,
-  dependencies: [gtk4, m],
+  dependencies: [gtk4, m,ncurses],
   install: true,
   install_dir: get_option('bindir')
 )

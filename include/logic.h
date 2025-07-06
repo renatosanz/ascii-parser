@@ -11,11 +11,9 @@
  * @param w_step Width sampling step
  * @param h_step Height sampling step
  * @param channels Number of color channels
- * @param output_w Output width in characters
- * @param output_h Output height in characters
  * @param ascii_colors Buffer to store color data
  * @return 0 on success, -1 on failure
  */
 int parse2file(char *output_filename, uint8_t *rgb_image, int width, int height,
-               int w_step, int h_step, int channels, int output_w, int output_h,
+               int w_step, int h_step, int channels,
                unsigned char *ascii_colors);
