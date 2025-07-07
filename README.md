@@ -59,7 +59,7 @@ xdg-open examples/shoe.txt.png
   ascii-parser -i input.jpg -o output.txt 40 20
   ```
   (40 columns wide, 20 rows tall)
-> NOTE: the user must supply a width and height values that should be around the 2% and 15% of the input image original size, higher values are forbiden.
+> NOTE: the user must supply a width and height values that should be around the 1% and 25% of the input image original size, higher values are forbiden.
 
 
 ## Examples
