@@ -188,11 +188,11 @@ int main(int argc, char **argv) {
     out_h = atoi(argv[optind]);
     out_w = atoi(argv[optind + 1]);
 
-    if ((out_w > img_w * 0.15 || out_h > img_h * 0.15) ||
-        (out_w < img_w * 0.02 || out_h < img_h * 0.02)) {
+    if ((out_w > img_w * 0.25 || out_h > img_h * 0.25) ||
+        (out_w < img_w * 0.01 || out_h < img_h * 0.01)) {
       printf("Error: Output dimensions exceed image size\n");
       printf(
-          "Recommended values: 2%% - 15%% percent of the input image size.\n");
+          "Recommended values: 1%% - 25%% percent of the input image size.\n");
       return EXIT_FAILURE;
     }
   }

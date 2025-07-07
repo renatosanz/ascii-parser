@@ -126,7 +126,8 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
 
         if (pixel_y >= 0 && pixel_y < height && pixel_x >= 0 &&
             pixel_x < width) {
-          int pos_pixel = (pixel_y * width + pixel_x) * 3;
+          int pos_pixel =
+              ((height - 1 - (y + y0 + dy)) * width + (x + x0 + dx)) * 3;
           if (bitmap[dy * (x1 - x0) + dx] == 255 &&
               counter < output_w * output_h) {
             pixels[pos_pixel] = ascii_colors[counter * 3];
