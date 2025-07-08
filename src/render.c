@@ -33,8 +33,7 @@
  * @return 0 on success, 1 on failure
  */
 int renderAsciiPNG(char *output_filename, int output_w, int output_h,
-                   unsigned char *ascii_colors, uint8_t bg_color,
-                   char *font_name) {
+                   unsigned char *ascii_colors, RGB bg_color, char *font_name) {
   // creare the img data
   float char_h = 32.0f;
   float char_w = char_h / 2;
@@ -50,7 +49,12 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
     pixels = NULL;
     return 1;
   }
-  memset(pixels, bg_color, width * height * 3);
+  memset(pixels, 0, width * height * 3);
+  for (int i = 0; i < width * height * 3; i += 3) {
+    pixels[i] = bg_color.r;
+    pixels[i + 1] = bg_color.g;
+    pixels[i + 2] = bg_color.b;
+  }
 
   // load font file
   unsigned char *font_buffer = NULL;
@@ -122,7 +126,7 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
     // draw character with ascii colors
     for (int dy = 0; dy < y1 - y0; dy++) {
       for (int dx = 0; dx < x1 - x0; dx++) {
-        int pixel_y = height - 1 - (y + y0 + dy);
+        int pixel_y = (y + y0 + dy);
         int pixel_x = x + x0 + dx;
 
         if (pixel_y >= 0 && pixel_y < height && pixel_x >= 0 &&
@@ -136,9 +140,9 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
             pixels[pos_pixel + 2] = ascii_colors[counter * 3 + 2];
           } else if (bitmap[dy * (x1 - x0) + dx] == 0 &&
                      counter < output_w * output_h) {
-            pixels[pos_pixel] = bg_color;
-            pixels[pos_pixel + 1] = bg_color;
-            pixels[pos_pixel + 2] = bg_color;
+            pixels[pos_pixel] = bg_color.r;
+            pixels[pos_pixel + 1] = bg_color.g;
+            pixels[pos_pixel + 2] = bg_color.b;
           }
         }
       }
@@ -258,6 +262,7 @@ static int get_text_from_file(char *filename, char **full_content) {
   }
 }
 
+// type for menu option of ncurses
 typedef struct {
   const char *text;
   int value;
@@ -266,7 +271,7 @@ typedef struct {
 // display a ncurses menu to select a font and
 // bg color, only if rendering is enabled
 
-void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
+void displayRenderMenu(RGB *bg_color_render, char *font_family) {
   static char *font_options[NUM_FONTS] = {
       "CascadiaCodeNF-Bold.ttf",
       "CascadiaCodeNF-Regular.ttf",
@@ -278,18 +283,12 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
       "JetBrainsMonoNL-Regular.ttf",
   };
 
-  static const MenuOption bgcolors_options[NUM_COLORS] = {
-      {"White - #FFFFFF", 255},
-      {"Gray - #808080", 128},
-      {"Black - #000000", 0}};
+  initscr();
+  cbreak();
+  noecho();
+  keypad(stdscr, TRUE);
+  curs_set(0);
 
-  initscr();            // init screen to use ncurses
-  cbreak();             // enable realtime char access
-  noecho();             // disable input chars display
-  keypad(stdscr, TRUE); // enable special keys
-  curs_set(0);          // hide cursor
-
-  // verify if the terminal performs colors
   if (has_colors()) {
     start_color();
     init_pair(1, COLOR_WHITE, COLOR_BLUE);
@@ -301,7 +300,6 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
 
   while (1) {
     clear();
-
     mvprintw(2, (COLS - 10) / 2, "Select a font:");
 
     for (int i = 0; i < NUM_FONTS; i++) {
@@ -322,9 +320,6 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
 
     if (key == 10) {
       strcpy(font_family, font_options[opt]);
-      mvprintw(3, (COLS - 10) / 2, "%s", font_family);
-
-      refresh();
       break;
     } else {
       switch (key) {
@@ -338,53 +333,61 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
     }
   }
 
-  int tmp_length_ff = strlen(font_family);
-  opt = 0;
+  int rgb_opt = 0;
+  RGB tmp_rgb = {255, 255, 255};
+  char *rgb_labels[3] = {"Red", "Green", "Blue"};
+  uint8_t *rgb_values[3] = {&tmp_rgb.r, &tmp_rgb.g, &tmp_rgb.b};
 
   while (1) {
     clear();
+    mvprintw(2, (COLS - 20) / 2, "Configure RGB Background");
 
-    mvprintw(2, (COLS - (tmp_length_ff + 15)) / 2, "Font selected: %s",
-             font_family);
-    mvprintw(3, (COLS - 26) / 2, "Select a background color:");
-
-    for (int i = 0; i < NUM_COLORS; i++) {
-      if (i == opt) {
+    for (int i = 0; i < 3; i++) {
+      if (i == rgb_opt) {
         attron(COLOR_PAIR(1) | A_BOLD);
-        mvprintw(5 + i, (COLS - strlen(bgcolors_options[i].text)) / 2, "%s",
-                 bgcolors_options[i].text);
+        mvprintw(5 + i, (COLS - 15) / 2, "%s: [%3d]", rgb_labels[i],
+                 *rgb_values[i]);
         attroff(COLOR_PAIR(1) | A_BOLD);
       } else {
         attron(COLOR_PAIR(2));
-        mvprintw(5 + i, (COLS - strlen(bgcolors_options[i].text)) / 2, "%s",
-                 bgcolors_options[i].text);
+        mvprintw(5 + i, (COLS - 15) / 2, "%s: [%3d]", rgb_labels[i],
+                 *rgb_values[i]);
         attroff(COLOR_PAIR(2));
       }
     }
 
-    key = getch();
+    if (has_colors()) {
+      init_color(100, tmp_rgb.r * 1000 / 255, tmp_rgb.g * 1000 / 255,
+                 tmp_rgb.b * 1000 / 255);
+      init_pair(3, COLOR_WHITE, 100);
+      attron(COLOR_PAIR(3));
+      mvprintw(9, (COLS - 10) / 2, "          ");
+      attroff(COLOR_PAIR(3));
+    }
 
+    mvprintw(11, (COLS - 30) / 2, "Arrows: Navigate  Enter: Edit");
+    mvprintw(12, (COLS - 20) / 2, "ESC: Confirm");
+
+    key = getch();
     switch (key) {
     case KEY_UP:
-      opt = (opt > 0) ? opt - 1 : NUM_COLORS - 1;
+      rgb_opt = (rgb_opt - 1 + 3) % 3;
       break;
     case KEY_DOWN:
-      opt = (opt < NUM_COLORS - 1) ? opt + 1 : 0;
+      rgb_opt = (rgb_opt + 1) % 3;
       break;
-    }
-    if (key == 10) {
-      *bg_color_render = bgcolors_options[opt].value;
-      mvprintw(10, (COLS - 13 - strlen(font_family)) / 2, "font family: %s",
-               font_family);
-      mvprintw(11, (COLS - 18 - strlen(bgcolors_options[opt].text)) / 2,
-               "background color: %s", bgcolors_options[opt].text);
-      mvprintw(12, (COLS - 25) / 2, "PRESS ANY KEY TO CONTINUE");
-
-      refresh();
-      getch();
+    case 10:
+      echo();
+      mvprintw(14, (COLS - 25) / 2, "Enter value (0-255): ");
+      char input[4];
+      getnstr(input, 3);
+      *rgb_values[rgb_opt] = atoi(input) % 256;
+      noecho();
       break;
+    case 27:
+      *bg_color_render = tmp_rgb;
+      endwin();
+      return;
     }
   }
-
-  endwin();
 }

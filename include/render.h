@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <utils.h>
 #include <stdint.h>
 #include "stb/stb_truetype.h"
 
@@ -15,7 +16,7 @@
  * @return 0 on success, 1 on failure
  */
  int renderAsciiPNG(char *output_filename, int output_w,
-                   int output_h, unsigned char *ascii_colors, uint8_t bg_color, char *font_family) ;
+                   int output_h, unsigned char *ascii_colors, RGB bg_color, char *font_family) ;
 
 /*
  * @brief Load a stb_truetype font
@@ -36,4 +37,4 @@ int load_font(const char *font_resource_path, unsigned char **font_buffer,
 static int get_text_from_file(char *filename, char **full_content) ;
 
 static char switch_to_render_char(const char c);
-void displayRenderMenu(uint8_t *bg_color_render, char *font_family);
+void displayRenderMenu(RGB *bg_color_render, char *font_family);

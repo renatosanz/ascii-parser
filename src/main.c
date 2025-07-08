@@ -15,7 +15,6 @@
 
 #include <logic.h>
 #include <render.h>
-#include <utils.h>
 
 // Global application and window references
 // GtkApplication *app;
@@ -80,8 +79,8 @@ int main(int argc, char **argv) {
   static char font_family[] = "";  // font family for rendering ascii image
   static unsigned char *ascii_colors = NULL; // colors of chars for rendering
   static uint8_t *rgb_image = NULL;          // image rgb data
-  static uint8_t bg_color_render =
-      0; // bg color of the ascii render (black or white)
+  // bg color of the ascii render (black or white)
+  static RGB bg_color_render = {0, 0, 0};
 
   // accepted arguments:
   // --input=<filename.jpg> or -i <filename.jpg>
