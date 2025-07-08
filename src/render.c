@@ -16,6 +16,7 @@
 #include "stb/stb_image.h"
 
 #define NUM_FONTS 8
+#define NUM_COLORS 3
 
 /**
  * @brief Renders ASCII art to a PNG image
@@ -257,8 +258,14 @@ static int get_text_from_file(char *filename, char **full_content) {
   }
 }
 
+typedef struct {
+  const char *text;
+  int value;
+} MenuOption;
+
 // display a ncurses menu to select a font and
 // bg color, only if rendering is enabled
+
 void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
   static char *font_options[NUM_FONTS] = {
       "CascadiaCodeNF-Bold.ttf",
@@ -271,7 +278,10 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
       "JetBrainsMonoNL-Regular.ttf",
   };
 
-  static char *bgcolors_options[2] = {"white", "black"};
+  static const MenuOption bgcolors_options[NUM_COLORS] = {
+      {"White - #FFFFFF", 255},
+      {"Gray - #808080", 128},
+      {"Black - #000000", 0}};
 
   initscr();            // init screen to use ncurses
   cbreak();             // enable realtime char access
@@ -338,16 +348,16 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
              font_family);
     mvprintw(3, (COLS - 26) / 2, "Select a background color:");
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < NUM_COLORS; i++) {
       if (i == opt) {
         attron(COLOR_PAIR(1) | A_BOLD);
-        mvprintw(5 + i, (COLS - strlen(bgcolors_options[i])) / 2, "%s",
-                 bgcolors_options[i]);
+        mvprintw(5 + i, (COLS - strlen(bgcolors_options[i].text)) / 2, "%s",
+                 bgcolors_options[i].text);
         attroff(COLOR_PAIR(1) | A_BOLD);
       } else {
         attron(COLOR_PAIR(2));
-        mvprintw(5 + i, (COLS - strlen(bgcolors_options[i])) / 2, "%s",
-                 bgcolors_options[i]);
+        mvprintw(5 + i, (COLS - strlen(bgcolors_options[i].text)) / 2, "%s",
+                 bgcolors_options[i].text);
         attroff(COLOR_PAIR(2));
       }
     }
@@ -356,22 +366,18 @@ void displayRenderMenu(uint8_t *bg_color_render, char *font_family) {
 
     switch (key) {
     case KEY_UP:
-      opt = (opt > 0) ? opt - 1 : 2 - 1;
+      opt = (opt > 0) ? opt - 1 : NUM_COLORS - 1;
       break;
     case KEY_DOWN:
-      opt = (opt < 2 - 1) ? opt + 1 : 0;
+      opt = (opt < NUM_COLORS - 1) ? opt + 1 : 0;
       break;
     }
     if (key == 10) {
-      if (!strcmp(bgcolors_options[opt], "black")) {
-        *bg_color_render = 0;
-      } else {
-        *bg_color_render = 255;
-      }
+      *bg_color_render = bgcolors_options[opt].value;
       mvprintw(10, (COLS - 13 - strlen(font_family)) / 2, "font family: %s",
                font_family);
-      mvprintw(11, (COLS - 18 - strlen(bgcolors_options[opt])) / 2,
-               "background color: %s", bgcolors_options[opt]);
+      mvprintw(11, (COLS - 18 - strlen(bgcolors_options[opt].text)) / 2,
+               "background color: %s", bgcolors_options[opt].text);
       mvprintw(12, (COLS - 25) / 2, "PRESS ANY KEY TO CONTINUE");
 
       refresh();
