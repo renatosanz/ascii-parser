@@ -97,7 +97,7 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
     }
 
     int advance, lsb, x0, y0, x1, y1;
-    char render_char = switch_to_render_char(c);
+    char render_char = switch_to_render_char(*c);
 
     stbtt_GetCodepointHMetrics(&font, render_char, &advance, &lsb);
     stbtt_GetCodepointBitmapBox(&font, render_char, scale, scale, &x0, &y0, &x1,
@@ -209,63 +209,20 @@ int load_font(const char *font_resource_path, unsigned char **font_buffer,
 // for render the image I decided to use a different scale of chars, so this
 // function executes the switch between the gradient of the text file and the
 // image gradient, for more info please check the README.md file
-static char switch_to_render_char(char *c) {
-  static char render_gradient[] = {'$', '&', '8', 'W', 'M', 'B', '@', '%',
-                                   '#', '*', '+', '=', '-', ':', '.', ' '};
-  switch (*c) {
-  case '@':
-    return render_gradient[0];
-    break;
-  case '&':
-    return render_gradient[1];
-    break;
-  case '%':
-    return render_gradient[2];
-    break;
-  case '#':
-    return render_gradient[3];
-    break;
-  case '*':
-    return render_gradient[4];
-    break;
-  case '+':
-    return render_gradient[5];
-    break;
-  case '~':
-    return render_gradient[6];
-    break;
-  case '=':
-    return render_gradient[7];
-    break;
-  case '_':
-    return render_gradient[8];
-    break;
-  case '-':
-    return render_gradient[9];
-    break;
-  case ';':
-    return render_gradient[10];
-    break;
-  case ':':
-    return render_gradient[11];
-    break;
-  case '`':
-    return render_gradient[12];
-    break;
-  case '\'':
-    return render_gradient[13];
-    break;
-  case '.':
-    return render_gradient[14];
-    break;
-  case ' ':
-    return render_gradient[15];
-    break;
-  default:
-    printf("index error");
-    return EXIT_FAILURE;
-    break;
+static char switch_to_render_char(const char c) {
+  static const char render_gradient[] = "$&8WMB@%#*+=-:.' "; // Cadena contigua
+  static const char char_map[256] = {
+      // Tabla de búsqueda estática
+      ['@'] = 0,  ['&'] = 1,   ['%'] = 2,  ['#'] = 3, ['*'] = 4,  ['+'] = 5,
+      ['~'] = 6,  ['='] = 7,   ['_'] = 8,  ['-'] = 9, [';'] = 10, [':'] = 11,
+      ['`'] = 12, ['\''] = 13, ['.'] = 14, [' '] = 15};
+
+  const unsigned char index = char_map[(unsigned char)c];
+  if (index < sizeof(render_gradient)) {
+    return render_gradient[index];
   }
+  fprintf(stderr, "Carácter no mapeado: %c\n", c);
+  return ' '; // Carácter por defecto
 }
 
 // extract all the text from a given filename
