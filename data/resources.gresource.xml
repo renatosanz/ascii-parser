@@ -2,7 +2,7 @@
 <gresources>
   <gresource prefix="/org/asciiparser">
     <!-- Archivos UI -->
-    <!-- <file preprocess="xml-stripblanks">data/ui/dec2bin.ui</file> -->
+    <file preprocess="xml-stripblanks">data/ui/dec2bin.ui</file>
     
     <file compressed="true">data/fonts/CascadiaCodeNF-Bold.ttf</file>
     <file compressed="true">data/fonts/CascadiaCodeNF-Regular.ttf</file>

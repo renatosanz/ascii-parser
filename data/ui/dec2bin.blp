@@ -1,11 +1,31 @@
 using Gtk 4.0;
 
-Window dec2bin_win{
-  title:"dec2bin";
+Window ascii-parser-win{
+  title:"ascii-parser";
   resizable:false;
 
   [titlebar]
   HeaderBar {
+    [start]
+    MenuButton file_options{
+      tooltip-text:"file options";
+      popover:PopoverMenu{
+        menu-model:menu{
+          section {
+            item ("Open New File","app.open-new-file")
+            item ("Open Recent File", "app.open-recents")
+            item ("Change Visuals", "app.change-visuals")
+            item ("Equalizer", "app.open-equalizer")
+          }
+          section{
+            item ("Keyboard Shortcuts")
+          }
+          section{
+            item ("Credits")
+          }
+        };
+      };
+    }
 
     [end]
     MenuButton about_btn{

@@ -3,6 +3,7 @@
 #include <bits/getopt_core.h>
 #include <getopt.h>
 #include <gio/gio.h>
+#include <gtk/gtk.h>
 #include <regex.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -17,52 +18,51 @@
 #include <render.h>
 
 // Global application and window references
-// GtkApplication *app;
-// GtkWindow *win;
-//
-// /**
-//  * @brief Callback function for GTK application activation
-//  * @param app The GTK application instance
-//  * @param user_data User data passed to the callback
-//  * @return Always returns 0
-//  */
-// static void *on_activate(GtkApplication *app, gpointer user_data) {
-//   GtkBuilder *builder = gtk_builder_new();
-//   gtk_builder_add_from_resource(builder, "/org/dec2bin/data/ui/dec2bin.ui",
-//                                 NULL);
-//
-//   win = GTK_WINDOW(gtk_builder_get_object(builder, "dec2bin_win"));
-//   g_object_unref(builder);
-//
-//   gtk_application_add_window(GTK_APPLICATION(app), GTK_WINDOW(win));
-//   gtk_window_present(GTK_WINDOW(win));
-//   return 0;
-// }
-//
-// /**
-//  * @brief Initializes and runs the GTK application
-//  * @param argc Argument count
-//  * @param argv Argument vector
-//  * @return Application exit status
-//  */
-// int mainGtkVersion(int argc, char **argv) {
-//   gtk_init();
-//   app = gtk_application_new("org.riprtx.asciiParser",
-//                             G_APPLICATION_DEFAULT_FLAGS);
-//   gtk_window_set_default_icon_name("dec2bin");
-//   g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
-//   int status = g_application_run(G_APPLICATION(app), argc, argv);
-//   g_object_unref(app);
-//
-//   return status;
-// }
+GtkApplication *app;
+GtkWindow *win;
+
+/**
+ * @brief Callback function for GTK application activation
+ * @param app The GTK application instance
+ * @param user_data User data passed to the callback
+ * @return Always returns 0
+ */
+static void *on_activate(GtkApplication *app, gpointer user_data) {
+  GtkBuilder *builder = gtk_builder_new();
+  gtk_builder_add_from_resource(builder, "/org/asciiparser/data/ui/dec2bin.ui",
+                                NULL);
+  win = GTK_WINDOW(gtk_builder_get_object(builder, "ascii-parser-win"));
+  g_object_unref(builder);
+
+  gtk_application_add_window(GTK_APPLICATION(app), GTK_WINDOW(win));
+  gtk_window_present(GTK_WINDOW(win));
+  return 0;
+}
+
+/**
+ * @brief Initializes and runs the GTK application
+ * @param argc Argument count
+ * @param argv Argument vector
+ * @return Application exit status
+ */
+int main(int argc, char **argv) {
+  gtk_init();
+  app = gtk_application_new("org.riprtx.asciiParser",
+                            G_APPLICATION_DEFAULT_FLAGS);
+  gtk_window_set_default_icon_name("dec2bin");
+  g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
+  int status = g_application_run(G_APPLICATION(app), argc, argv);
+  g_object_unref(app);
+
+  return status;
+}
 
 /**
  * @brief Main program entry point
  * @param argc Argument count
  * @param argv Argument vector
  * @return Program exit status
- */
+ *
 int main(int argc, char **argv) {
   // int variables
   static int out_h = 0, out_w = 0; // output size w*h, in chars
@@ -236,3 +236,5 @@ if (verb_flag) {
   stbi_image_free(rgb_image);
   return EXIT_SUCCESS;
 }
+
+ */
