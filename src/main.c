@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
 
   // load image data
   rgb_image = stbi_load(input_file, &img_w, &img_h, &img_bpp, 0);
-  if (verb_flag) {
+if (verb_flag) {
     printf("Image dimensions: %dx%d, BPP: %d\n", img_w, img_h, img_bpp);
   }
 
