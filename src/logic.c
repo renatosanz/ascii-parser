@@ -21,6 +21,7 @@
 int parse2file(char *output_filename, uint8_t *rgb_image, int width, int height,
                int w_step, int h_step, int channels,
                unsigned char *ascii_colors) {
+
   char gradient[] = {'@', '&', '%', '#', '*', '+',  '~', '=',
                      '_', '-', ';', ':', '`', '\'', '.', ' '};
   int num_chars = sizeof(gradient) / sizeof(gradient[0]);

@@ -1,0 +1,84 @@
+using Gtk 4.0;
+
+Window ascii-parser-win{
+  title:"ascii-parser";
+  resizable:false;
+  default-width:300;
+
+  [titlebar]
+  HeaderBar {
+    [end]
+    MenuButton about_btn{
+      tooltip-text:"about";
+      Image{
+        icon-name:"view-more-horizontal-symbolic";
+      }
+      popover:Popover{
+        Box{
+          orientation:vertical;
+          spacing:12;
+
+          Button about_display_btn{
+            label:"About";
+          }
+          Button close_btn{
+            label:"Close";
+            action-name:"app.close-app";
+            css-classes:["destructive-action"];
+          }
+        }
+      };
+    }  
+  }
+
+  Box {
+    margin-top:12;
+    margin-bottom:12;
+    margin-start:12;
+    margin-end:12;
+    spacing:12;
+    orientation: vertical;
+
+    Box{
+      orientation: vertical;
+      spacing:6;
+      Label{
+        label:"ascii-parser";
+        css-classes:["title-1"];
+      }
+      Label{
+        label:"A image parser that converts images to ASCII characters, capable of generating both text files and rendered PNG images";
+        wrap:true;
+      }
+      Box{
+        homogeneous:true;
+        hexpand:true;
+        orientation: horizontal;
+        Image{
+          icon-name:"insert-image-symbolic";
+          css-classes:["large-icons"];
+        }
+        Image{
+          icon-name:"text-x-generic-symbolic";
+          css-classes:["large-icons"];
+        }
+      }
+    }
+
+    Box{
+      Button{
+        action-name:"app.open-file";
+        css-classes:["suggested-action"];
+        child:Box{
+          spacing:5;
+          Label{
+            label:"Open File";
+          }
+          Image{
+            icon-name:"insert-image-symbolic";
+          }
+        };
+      }
+    }
+  }
+}

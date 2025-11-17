@@ -1,3 +1,4 @@
+#include "types.h"
 #include <gio/gio.h>
 #include <glib.h>
 #include <gmodule.h>
@@ -33,7 +34,8 @@
  * @return 0 on success, 1 on failure
  */
 int renderAsciiPNG(char *output_filename, int output_w, int output_h,
-                   unsigned char *ascii_colors, RGB bg_color, char *font_name) {
+                   unsigned char *ascii_colors, RGB *bg_color,
+                   char *font_name) {
   // creare the img data
   float char_h = 32.0f;
   float char_w = char_h / 2;
@@ -51,9 +53,9 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
   }
   memset(pixels, 0, width * height * 3);
   for (int i = 0; i < width * height * 3; i += 3) {
-    pixels[i] = bg_color.r;
-    pixels[i + 1] = bg_color.g;
-    pixels[i + 2] = bg_color.b;
+    pixels[i] = bg_color->r;
+    pixels[i + 1] = bg_color->g;
+    pixels[i + 2] = bg_color->b;
   }
 
   // load font file
@@ -140,9 +142,9 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
             pixels[pos_pixel + 2] = ascii_colors[counter * 3 + 2];
           } else if (bitmap[dy * (x1 - x0) + dx] == 0 &&
                      counter < output_w * output_h) {
-            pixels[pos_pixel] = bg_color.r;
-            pixels[pos_pixel + 1] = bg_color.g;
-            pixels[pos_pixel + 2] = bg_color.b;
+            pixels[pos_pixel] = bg_color->r;
+            pixels[pos_pixel + 1] = bg_color->g;
+            pixels[pos_pixel + 2] = bg_color->b;
           }
         }
       }

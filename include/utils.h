@@ -1,10 +1,10 @@
-#include <string.h>
+#ifndef UTILS_H
+#define UTILS_H
+
+#include "types.h"
 #include <stdint.h>
+#include <string.h>
 
-const char *get_filename_ext(const char *filename) ;
+const char *get_filename_ext(const char *filename);
 
-typedef struct {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-} RGB;
+#endif // !UTILS_H

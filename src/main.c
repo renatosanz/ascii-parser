@@ -1,58 +1,152 @@
 #include "glib-object.h"
 #include "glib.h"
+#include "stb/stb_image.h"
+#include "stb/stb_image_write.h"
+#include "stb/stb_truetype.h"
+#include "types.h"
+#include <ascii_gtk.h>
 #include <bits/getopt_core.h>
 #include <getopt.h>
 #include <gio/gio.h>
 #include <gtk/gtk.h>
+#include <logic.h>
 #include <regex.h>
+#include <render.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "stb/stb_image.h"
-#include "stb/stb_image_write.h"
-#include "stb/stb_truetype.h"
-
-#include <logic.h>
-#include <render.h>
-
 // Global application and window references
-GtkApplication *app;
-GtkWindow *win;
+AppData *app_data;
 
-/**
- * @brief Callback function for GTK application activation
- * @param app The GTK application instance
- * @param user_data User data passed to the callback
- * @return Always returns 0
- */
+static const char *font_options[] = {
+    "CascadiaCodeNF-Bold.ttf",
+    "CascadiaCodeNF-Regular.ttf",
+    "FiraCode-Bold.ttf",
+    "FiraCode-Regular.ttf",
+    "Hack-Bold.ttf",
+    "Hack-Regular.ttf",
+    "JetBrainsMonoNL-Bold.ttf",
+    "JetBrainsMonoNL-Regular.ttf",
+};
+
 static void *on_activate(GtkApplication *app, gpointer user_data) {
+  AppData *app_data = (AppData *)user_data;
   GtkBuilder *builder = gtk_builder_new();
-  gtk_builder_add_from_resource(builder, "/org/asciiparser/data/ui/dec2bin.ui",
-                                NULL);
-  win = GTK_WINDOW(gtk_builder_get_object(builder, "ascii-parser-win"));
+  gtk_builder_add_from_resource(
+      builder, "/org/asciiparser/data/ui/ascii-parser.ui", NULL);
+  app_data->active_win =
+      GTK_WINDOW(gtk_builder_get_object(builder, "ascii-parser-win"));
   g_object_unref(builder);
 
-  gtk_application_add_window(GTK_APPLICATION(app), GTK_WINDOW(win));
-  gtk_window_present(GTK_WINDOW(win));
+  load_actions(app_data);
+
+  gtk_application_add_window(GTK_APPLICATION(app_data->app),
+                             GTK_WINDOW(app_data->active_win));
+  gtk_window_present(GTK_WINDOW(app_data->active_win));
   return 0;
 }
 
-/**
- * @brief Initializes and runs the GTK application
- * @param argc Argument count
- * @param argv Argument vector
- * @return Application exit status
- */
+int load_file_metadata(char *filepath, AppData *app_data) {
+  if (!filepath) {
+    fprintf(stderr, "Error: Input file required (-i)\n");
+    return -1;
+  }
+  app_data->input_filepath = g_strdup_printf("%s", filepath);
+
+  if (!stbi_info(app_data->input_filepath, &app_data->img_w, &app_data->img_h,
+                 &app_data->img_bpp)) {
+    printf("Error: Unsupported image format\n");
+    return -1;
+  }
+  return 0;
+}
+
+int lauch_processing_window(char *filepath) {
+
+  if (load_file_metadata(filepath, app_data)) {
+    return EXIT_FAILURE;
+  };
+
+  if (app_data->active_win) {
+    gtk_window_destroy(app_data->active_win);
+  }
+  app_data->input_filepath = g_strdup_printf("%s", filepath);
+  app_data->selected_font = font_options[0];
+
+  GtkBuilder *builder = gtk_builder_new();
+  gtk_builder_add_from_resource(
+      builder, "/org/asciiparser/data/ui/process_win.ui", NULL);
+  app_data->active_win =
+      GTK_WINDOW(gtk_builder_get_object(builder, "process_win"));
+
+  GtkLabel *filepath_label =
+      GTK_LABEL(gtk_builder_get_object(builder, "filepath_label"));
+  gtk_label_set_label(
+      filepath_label,
+      g_strdup_printf("Selected file: %s",
+                      g_file_get_basename(g_file_new_for_path(filepath))));
+  GtkDropDown *drop =
+      GTK_DROP_DOWN(gtk_builder_get_object(builder, "font_drop_down"));
+  gtk_drop_down_set_model(drop,
+                          G_LIST_MODEL(gtk_string_list_new(font_options)));
+  g_signal_connect(GTK_WIDGET(drop), "notify::selected",
+                   G_CALLBACK(select_font_action), app_data);
+  gtk_image_set_from_file(
+      GTK_IMAGE(gtk_builder_get_object(builder, "selected_img")), filepath);
+
+  app_data->manual_sizing_box =
+      GTK_BOX(gtk_builder_get_object(builder, "manual_sizing_box"));
+  gtk_widget_set_sensitive(GTK_WIDGET(app_data->manual_sizing_box),
+                           app_data->manual_sizing_enabled);
+  app_data->percent_sizing_box =
+      GTK_BOX(gtk_builder_get_object(builder, "percent_sizing_box"));
+  GtkScale *percent_scale = GTK_SCALE(
+      gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 1, 12, 0.01));
+  gtk_widget_set_hexpand(GTK_WIDGET(percent_scale), true);
+  gtk_range_set_value(GTK_RANGE(percent_scale), 6);
+  gtk_scale_set_draw_value(GTK_SCALE(percent_scale), true);
+  gtk_widget_set_sensitive(GTK_WIDGET(percent_scale),
+                           !app_data->manual_sizing_enabled);
+  gtk_box_append(app_data->percent_sizing_box, GTK_WIDGET(percent_scale));
+
+  GtkLabel *label_show_output_size =
+      GTK_LABEL(gtk_builder_get_object(builder, "label_show_output_size"));
+
+  g_print("FLAAAAAAAAAAAG");
+
+  GdkRGBA color;
+  gdk_rgba_parse(&color, "rgba(255, 255, 255, 1.0)");
+  app_data->color_btn =
+      GTK_COLOR_DIALOG_BUTTON(gtk_builder_get_object(builder, "color_btn"));
+  gtk_color_dialog_button_set_rgba(app_data->color_btn, &color);
+  g_signal_connect(GTK_WIDGET(app_data->color_btn), "notify::rgba",
+                   G_CALLBACK(select_background_action), app_data);
+
+  g_object_unref(builder);
+
+  gtk_application_add_window(GTK_APPLICATION(app_data->app),
+                             GTK_WINDOW(app_data->active_win));
+  gtk_window_present(GTK_WINDOW(app_data->active_win));
+}
+
+void on_shutdown(GtkApplication *app, gpointer user_data) { g_free(app_data); }
+
 int main(int argc, char **argv) {
   gtk_init();
-  app = gtk_application_new("org.riprtx.asciiParser",
-                            G_APPLICATION_DEFAULT_FLAGS);
-  gtk_window_set_default_icon_name("dec2bin");
-  g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
-  int status = g_application_run(G_APPLICATION(app), argc, argv);
-  g_object_unref(app);
+  app_data = g_new0(AppData, 1);
+  app_data->manual_sizing_enabled = false;
+  app_data->bg_color = g_new0(RGB, 1);
+  app_data->input_filepath = NULL;
+  app_data->app = gtk_application_new("org.riprtx.asciiParser",
+                                      G_APPLICATION_DEFAULT_FLAGS);
+  g_signal_connect(app_data->app, "activate", G_CALLBACK(on_activate),
+                   app_data);
+  g_signal_connect(app_data->app, "shutdown", G_CALLBACK(on_activate),
+                   app_data);
+  int status = g_application_run(G_APPLICATION(app_data->app), argc, argv);
+  g_object_unref(app_data->app);
 
   return status;
 }
@@ -162,7 +256,7 @@ int main(int argc, char **argv) {
 
   // load image data
   rgb_image = stbi_load(input_file, &img_w, &img_h, &img_bpp, 0);
-if (verb_flag) {
+  if (verb_flag) {
     printf("Image dimensions: %dx%d, BPP: %d\n", img_w, img_h, img_bpp);
   }
 

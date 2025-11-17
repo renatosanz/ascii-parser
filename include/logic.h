@@ -1,6 +1,10 @@
+#ifndef LOGIC_H
+#define LOGIC_H
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <types.h>
 
 /**
  * @brief Converts an RGB image to ASCII art and saves to file
@@ -17,3 +21,4 @@
 int parse2file(char *output_filename, uint8_t *rgb_image, int width, int height,
                int w_step, int h_step, int channels,
                unsigned char *ascii_colors);
+#endif // !LOGIC_H

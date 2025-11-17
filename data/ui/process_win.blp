@@ -1,0 +1,144 @@
+using Gtk 4.0;
+
+Window process_win{
+  title:"ascii-parser";
+  resizable:false;
+  default-width:300;
+
+  [titlebar]
+  HeaderBar {
+    [end]
+    MenuButton about_btn{
+      tooltip-text:"about";
+      Image{
+        icon-name:"view-more-horizontal-symbolic";
+      }
+      popover:Popover{
+        Box{
+          orientation:vertical;
+          spacing:12;
+
+          Button about_display_btn{
+            label:"About";
+          }
+          Button close_btn{
+            label:"Close";
+            action-name:"app.close-app";
+            css-classes:["destructive-action"];
+          }
+        }
+      };
+    }  
+  }
+
+  Box {
+    margin-top:12;
+    margin-bottom:12;
+    margin-start:12;
+    margin-end:12;
+    spacing:6;
+    orientation: vertical;
+
+    Box main_box{
+      orientation: vertical;
+      spacing:6;
+
+      Label filepath_label{
+        label:"Selected file: ";
+        wrap:true;
+      }
+      Image selected_img{
+        resource:"/org/asciiparser/data/icons/images.svg";
+        height-request:100;
+        hexpand:true;
+      }
+
+      Box{
+        spacing:6;
+        hexpand:true;
+        Label{label:"Manual Sizing";}
+        Switch manual-sizing-switch{
+          state:false;
+          action-name:"app.toggle-manual-sizing";
+        }
+      }
+      Box percent_sizing_box{
+        orientation:vertical;
+        spacing:0;
+        Label{label:"Select the output reduction percent:";}
+      }
+
+      Box manual_sizing_box{
+        orientation:vertical;
+        Label{
+          label:"Enter the output file widht and height (in chars)";
+          wrap:true;
+        }
+        spacing:6;
+        Box{
+          spacing:6;
+          orientation:horizontal;
+          Entry height_entry{
+            hexpand:true;
+            placeholder-text:"height";
+          }
+          Entry widht_entry{
+            hexpand:true;
+            placeholder-text:"widht";
+          }
+        }
+      }
+
+      Label label_show_output_size{
+        label:"Output size:nxm";
+      }
+
+      Label{
+        label:"Select a font";
+      }
+      DropDown font_drop_down{
+      }
+      Box{
+        orientation:vertical;
+        spacing:6;
+        Box{
+          orientation:horizontal;
+          spacing:6;
+          Label{
+            label:"Background color: ";
+          }
+          ColorDialogButton color_btn{
+            dialog:ColorDialog{
+              modal:true;
+            };
+          }
+        }
+        Box{
+          orientation:horizontal;
+          spacing:6;
+          CheckButton{
+            Label{
+              label:"Render ascii file";
+            }
+          }
+        }
+      }
+    }
+
+    Box{
+      Button{
+        action-name:"app.process-image";
+        css-classes:["suggested-action"];
+        child:Box{
+          spacing:5;
+          Label{
+            label:"Process";
+          }
+          Image{
+            icon-name:"processes-symbolic";
+          }
+        };
+      }
+    }
+  }
+}
