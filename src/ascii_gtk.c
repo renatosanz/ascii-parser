@@ -48,6 +48,17 @@ void file_dialog_response(GObject *source_object, GAsyncResult *result,
   g_object_unref(file);
 }
 
+void handle_percent_sliding(GtkRange *self, AppData *app_data) {
+  float scaling_percent = gtk_range_get_value(self);
+  printf("slide value: %f \n", scaling_percent);
+  app_data->out_h = (int)(app_data->img_h * scaling_percent / 100);
+  app_data->out_w = (int)(app_data->img_w * scaling_percent / 100);
+  printf("output values: %d x %d\n", app_data->out_h, app_data->out_w);
+  gtk_label_set_text(app_data->label_show_output_size,
+                     g_strdup_printf("Output size: %dx%d (chars)",
+                                     app_data->out_h, app_data->out_w));
+}
+
 void open_new_file_dialog(GSimpleAction *action, GVariant *parameter,
                           AppData *app_data) {
   (void)action;

@@ -12,6 +12,7 @@ typedef struct {
   GtkApplication *app;
   GtkWindow *active_win;
   GtkColorDialogButton *color_btn;
+  GtkLabel *label_show_output_size;
   GtkBox *manual_sizing_box;
   GtkBox *percent_sizing_box;
   char *selected_font;
