@@ -64,6 +64,9 @@ int load_file_metadata(char *filepath, AppData *app_data) {
     printf("Error: Unsupported image format\n");
     return -1;
   }
+  // extract image data
+  app_data->rgb_image = stbi_load(app_data->input_filepath, &app_data->img_w,
+                                  &app_data->img_h, &app_data->img_bpp, 0);
   return 0;
 }
 
