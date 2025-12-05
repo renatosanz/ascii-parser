@@ -52,7 +52,7 @@ void handle_percent_sliding(GtkRange *self, AppData *app_data) {
   float scaling_percent = gtk_range_get_value(self);
   printf("slide value: %f \n", scaling_percent);
   app_data->out_h = (int)(app_data->img_h * scaling_percent / 100);
-  app_data->out_w = (int)(app_data->img_w * scaling_percent / 100);
+  app_data->out_w = (int)(app_data->img_w * scaling_percent / 100) * 2;
   printf("output values: %d x %d\n", app_data->out_h, app_data->out_w);
   gtk_label_set_text(app_data->label_show_output_size,
                      g_strdup_printf("Output size: %dx%d (chars)",
@@ -127,12 +127,10 @@ void init_image_processing(GtkButton *btn, GParamSpec *pspec,
     printf("ASCII conversion complete: %s\n", app_data->output_text_filepath);
     // if rndr_flag is enable, then open a ncurses menu to select a font_family
     // on the gresources and a background color (black = 0 or white = 255)
-    if (app_data->manual_sizing_enabled) {
-      renderAsciiPNG(app_data->output_filepath, app_data->out_w,
-                     app_data->out_h, app_data->ascii_colors,
-                     app_data->bg_color, app_data->selected_font);
-      printf("PNG rendering complete\n");
-    }
+    renderAsciiPNG(app_data->output_text_filepath, app_data->out_w,
+                   app_data->out_h, app_data->ascii_colors, app_data->bg_color,
+                   app_data->selected_font);
+    printf("PNG rendering complete\n");
     free(app_data->ascii_colors);
     app_data->ascii_colors = NULL;
   } else {
@@ -142,7 +140,6 @@ void init_image_processing(GtkButton *btn, GParamSpec *pspec,
     app_data->ascii_colors = NULL;
   }
 
-  stbi_image_free(app_data->rgb_image);
 }
 
 void select_background_action(GtkColorDialogButton *color_btn,

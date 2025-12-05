@@ -82,7 +82,7 @@ void init_globals(AppData *app_data, char *filepath) {
 }
 
 int lauch_processing_window(char *filepath) {
-
+  stbi_set_flip_vertically_on_load(true);
   if (load_file_metadata(filepath, app_data)) {
     return EXIT_FAILURE;
   };
@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
                                       G_APPLICATION_DEFAULT_FLAGS);
   g_signal_connect(app_data->app, "activate", G_CALLBACK(on_activate),
                    app_data);
-  g_signal_connect(app_data->app, "shutdown", G_CALLBACK(on_activate),
+  g_signal_connect(app_data->app, "shutdown", G_CALLBACK(on_shutdown),
                    app_data);
   int status = g_application_run(G_APPLICATION(app_data->app), argc, argv);
   g_object_unref(app_data->app);
