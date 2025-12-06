@@ -61,7 +61,13 @@ executable(
   sources,
   resources,
   include_directories: include_dir,
-  dependencies: [gtk4, m,ncurses],
+  dependencies: [
+    gtk4,
+    m,
+    ncurses, 
+    dependency('glib-2.0'),
+    dependency('gobject-2.0')
+    ],
   install: true,
   install_dir: get_option('bindir')
 )
