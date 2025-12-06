@@ -82,7 +82,7 @@ void init_globals(AppData *app_data, char *filepath) {
 }
 
 int lauch_processing_window(char *filepath) {
-  stbi_set_flip_vertically_on_load(true);
+  // stbi_set_flip_vertically_on_load(true);
   if (load_file_metadata(filepath, app_data)) {
     return EXIT_FAILURE;
   };

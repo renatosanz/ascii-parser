@@ -32,7 +32,6 @@ int parse2file(char *output_filename, uint8_t *rgb_image, int width, int height,
     return -1;
   }
 
-  printf("flagggggggggggggggggggg %s\n", output_filename);
   int counter_z = 0;
   for (int y = 0; y < height; y += h_step) {
     for (int x = 0; x < width; x += w_step) {
@@ -41,9 +40,6 @@ int parse2file(char *output_filename, uint8_t *rgb_image, int width, int height,
       unsigned char g = 0;
       unsigned char b = 0;
 
-      printf("flaggg -> x: %d y: %d index: %zu\n", x, y, index);
-      printf("flaggg -> %u,%u,%u\n", rgb_image[index], rgb_image[index + 1],
-             rgb_image[index + 2]);
       if (rgb_image[index] && rgb_image[index + 1] && rgb_image[index + 2]) {
         r = rgb_image[index];
         g = rgb_image[index + 1];
@@ -58,8 +54,6 @@ int parse2file(char *output_filename, uint8_t *rgb_image, int width, int height,
       ascii_colors[counter_z * 3 + 1] = g;
       ascii_colors[counter_z * 3 + 2] = b;
       counter_z++;
-
-      printf("flaggg -> x: %d y: %d index: %zu\n", x, y, index);
     }
     fprintf(asciifile, "\n");
   }

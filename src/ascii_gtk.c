@@ -116,8 +116,6 @@ void init_image_processing(GtkButton *btn, GParamSpec *pspec,
   app_data->ascii_colors =
       malloc((app_data->out_h + 5) * (app_data->out_w + 5) * 3);
 
-  printf("flagggggggggggggggggggg\n");
-
   // if no issues happend while generating the text file, then finish
   if (!parse2file(app_data->output_text_filepath, app_data->rgb_image,
                   app_data->img_w, app_data->img_h,
@@ -139,7 +137,6 @@ void init_image_processing(GtkButton *btn, GParamSpec *pspec,
     free(app_data->ascii_colors);
     app_data->ascii_colors = NULL;
   }
-
 }
 
 void select_background_action(GtkColorDialogButton *color_btn,

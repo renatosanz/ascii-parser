@@ -1,21 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/org/asciiparser">
-    <!-- Archivos UI -->
+    <!-- fonts -->
+    <file compressed="true" >data/fonts/CascadiaCodeNF-Bold.ttf</file>
+    <file compressed="true" >data/fonts/CascadiaCodeNF-Regular.ttf</file>
+    <file compressed="true" >data/fonts/FiraCode-Bold.ttf</file>
+    <file compressed="true" >data/fonts/FiraCode-Regular.ttf</file>
+    <file compressed="true" >data/fonts/Hack-Bold.ttf</file>
+    <file compressed="true" >data/fonts/Hack-Regular.ttf</file>
+    <file compressed="true" >data/fonts/JetBrainsMonoNL-Bold.ttf</file>
+    <file compressed="true" >data/fonts/JetBrainsMonoNL-Regular.ttf</file>
+
+    <!-- archivos ui -->
     <file preprocess="xml-stripblanks">data/ui/ascii-parser.ui</file>
     <file preprocess="xml-stripblanks">data/ui/process_win.ui</file>
     <file preprocess="xml-stripblanks">data/icons/images.svg</file>
     <file preprocess="xml-stripblanks">data/icons/arrow5-right-symbolic.svg</file>
 
-    <file compressed="true">data/fonts/CascadiaCodeNF-Bold.ttf</file>
-    <file compressed="true">data/fonts/CascadiaCodeNF-Regular.ttf</file>
-    <file compressed="true">data/fonts/FiraCode-Bold.ttf</file>
-    <file compressed="true">data/fonts/FiraCode-Regular.ttf</file>
-    <file compressed="true">data/fonts/Hack-Bold.ttf</file>
-    <file compressed="true">data/fonts/Hack-Regular.ttf</file>
-    <file compressed="true">data/fonts/JetBrainsMonoNL-Bold.ttf</file>
-    <file compressed="true">data/fonts/JetBrainsMonoNL-Regular.ttf</file>
-      
     <!-- <file preprocess="xml-stripblanks">ui/preferences.ui</file> -->
     <!-- Otros recursos (opcional) -->
     <!-- <file>css/estilos.css</file> -->
