@@ -1,3 +1,4 @@
+#include "about_gtk.h"
 #include "gdk/gdk.h"
 #include "glib-object.h"
 #include "glib.h"
@@ -274,6 +275,8 @@ void load_actions(AppData *app_data) {
       g_simple_action_new("toggle-manual-sizing", NULL);
   GSimpleAction *init_process_action_obj =
       g_simple_action_new("process-image", NULL);
+  GSimpleAction *display_about_dialog_action_obj =
+      g_simple_action_new("display-about-dialog", NULL);
 
   g_signal_connect(open_file_action_obj, "activate",
                    G_CALLBACK(open_new_file_dialog), app_data);
@@ -283,6 +286,8 @@ void load_actions(AppData *app_data) {
                    G_CALLBACK(select_font_action), app_data);
   g_signal_connect(init_process_action_obj, "activate",
                    G_CALLBACK(init_image_loading), app_data);
+  g_signal_connect(display_about_dialog_action_obj, "activate",
+                   G_CALLBACK(display_about_dialog), app_data);
 
   GActionMap *action_map = G_ACTION_MAP(app_data->app);
   g_action_map_add_action(action_map, G_ACTION(open_file_action_obj));
@@ -290,4 +295,6 @@ void load_actions(AppData *app_data) {
   g_action_map_add_action(action_map, G_ACTION(init_process_action_obj));
   g_action_map_add_action(action_map,
                           G_ACTION(toggle_manual_sizing_action_obj));
+  g_action_map_add_action(action_map,
+                          G_ACTION(display_about_dialog_action_obj));
 }

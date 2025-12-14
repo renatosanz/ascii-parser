@@ -16,6 +16,7 @@
     <file preprocess="xml-stripblanks">data/ui/process_win.ui</file>
     <file preprocess="xml-stripblanks">data/ui/loading_modal.ui</file>
     <file preprocess="xml-stripblanks">data/icons/images.svg</file>
+    <file compressed="true">data/icons/logo.png</file>
     <file compressed="true">data/icons/img_placeholder.png</file>
     <file preprocess="xml-stripblanks">data/icons/arrow5-right-symbolic.svg</file>
 
