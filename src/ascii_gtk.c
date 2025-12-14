@@ -1,4 +1,5 @@
 #include "gdk/gdk.h"
+#include "glib-object.h"
 #include "glib.h"
 #include "gtk/gtk.h"
 #include "gtk/gtkdropdown.h"
@@ -8,8 +9,14 @@
 #include "stb/stb_image_write.h"
 #include "types.h"
 #include <ascii_gtk.h>
+#include <bits/pthreadtypes.h>
 #include <inttypes.h>
+#include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 void file_dialog_response(GObject *source_object, GAsyncResult *result,
                           gpointer user_data) {
@@ -48,15 +55,71 @@ void file_dialog_response(GObject *source_object, GAsyncResult *result,
   g_object_unref(file);
 }
 
+void set_output_size_label(AppData *app_data) {
+  printf("output values: %d x %d\n", app_data->out_h, app_data->out_w);
+  gtk_label_set_text(app_data->label_show_output_size,
+                     g_strdup_printf("Output size: %dx%d (chars)",
+                                     app_data->out_h, app_data->out_w));
+}
+
+void handle_manual_entry_height(GtkEntry *height_entry, AppData *app_data) {
+  const char *value = gtk_editable_get_text(GTK_EDITABLE(height_entry));
+
+  if (strlen(value) == 0 || strlen(value) > 5) {
+    return;
+  }
+
+  int regex_val = regexec(&app_data->decimal_regex, value, 0, NULL, 0);
+  if (regex_val == REG_NOMATCH) {
+    return;
+  }
+
+  int int_value = (int)atoi(value);
+  if (int_value > app_data->max_out_h || int_value < app_data->min_out_h) {
+    return;
+  }
+
+  printf("entry height %d\n", int_value);
+  app_data->out_h = int_value;
+  set_output_size_label(app_data);
+}
+
+void handle_manual_entry_width(GtkEntry *width_entry, AppData *app_data) {
+  const char *value = gtk_editable_get_text(GTK_EDITABLE(width_entry));
+  if (strlen(value) == 0 || strlen(value) > 5) { // verify lenght
+    return;
+  }
+
+  int regex_val = regexec(&app_data->decimal_regex, value, 0, NULL, 0);
+  if (regex_val == REG_NOMATCH) {
+    return;
+  }
+
+  int int_value = (int)atoi(value);
+  if (int_value > app_data->max_out_w || int_value < app_data->min_out_w) {
+    return;
+  }
+
+  printf("entry width%d\n", int_value);
+  app_data->out_w = int_value;
+  set_output_size_label(app_data);
+}
+
 void handle_percent_sliding(GtkRange *self, AppData *app_data) {
   float scaling_percent = gtk_range_get_value(self);
   printf("slide value: %f \n", scaling_percent);
   app_data->out_h = (int)(app_data->img_h * scaling_percent / 100);
   app_data->out_w = (int)(app_data->img_w * scaling_percent / 100) * 2;
-  printf("output values: %d x %d\n", app_data->out_h, app_data->out_w);
-  gtk_label_set_text(app_data->label_show_output_size,
-                     g_strdup_printf("Output size: %dx%d (chars)",
-                                     app_data->out_h, app_data->out_w));
+  set_output_size_label(app_data);
+}
+
+void toggle_manual_sizing(GSimpleAction *action, GVariant *parameter,
+                          AppData *app_data) {
+  app_data->manual_sizing_enabled = !app_data->manual_sizing_enabled;
+  gtk_widget_set_sensitive(GTK_WIDGET(app_data->percent_sizing_box),
+                           !app_data->manual_sizing_enabled);
+  gtk_widget_set_sensitive(GTK_WIDGET(app_data->manual_sizing_box),
+                           app_data->manual_sizing_enabled);
 }
 
 void open_new_file_dialog(GSimpleAction *action, GVariant *parameter,
@@ -76,25 +139,92 @@ void open_new_file_dialog(GSimpleAction *action, GVariant *parameter,
   gtk_file_dialog_open(dialog, window, NULL, file_dialog_response, NULL);
 }
 
-void toggle_manual_sizing(GSimpleAction *action, GVariant *parameter,
-                          AppData *app_data) {
-  app_data->manual_sizing_enabled = !app_data->manual_sizing_enabled;
-  gtk_widget_set_sensitive(GTK_WIDGET(app_data->percent_sizing_box),
-                           !app_data->manual_sizing_enabled);
-  gtk_widget_set_sensitive(GTK_WIDGET(app_data->manual_sizing_box),
-                           app_data->manual_sizing_enabled);
+void stop_processing(GtkButton *btn, AppData *window) {
+  printf("TODO: free resources and stuff, then close\n");
+}
+
+void accept_result(GtkButton *btn, AppData *app_data) {
+  gtk_window_close(app_data->loading_modal->window);
+}
+
+void open_output_file(GtkButton *btn, AppData *app_data) {
+  pid_t pid = fork();
+  if (pid == 0) {
+    execlp("xdg-open", "xdg-open", app_data->output_filepath, NULL);
+  } else if (pid < 0) {
+    perror("failed fork to open image viewer");
+  }
+}
+
+void open_loading_modal(AppData *app_data) {
+  GtkBuilder *builder = gtk_builder_new();
+  gtk_builder_add_from_resource(
+      builder, "/org/asciiparser/data/ui/loading_modal.ui", NULL);
+  app_data->loading_modal->window =
+      GTK_WINDOW(gtk_builder_get_object(builder, "loading_modal"));
+  gtk_window_set_modal(app_data->loading_modal->window, true);
+  gtk_application_add_window(GTK_APPLICATION(app_data->app),
+                             GTK_WINDOW(app_data->loading_modal->window));
+  // set img_placeholder
+  app_data->loading_modal->output_thumbail =
+      GTK_PICTURE(gtk_builder_get_object(builder, "output_img"));
+  gtk_picture_set_resource(app_data->loading_modal->output_thumbail,
+                           "/org/asciiparser/data/icons/img_placeholder.png");
+
+  app_data->loading_modal->cancel_btn =
+      GTK_BUTTON(gtk_builder_get_object(builder, "cancel_btn"));
+  g_signal_connect(GTK_WIDGET(app_data->loading_modal->cancel_btn), "clicked",
+                   G_CALLBACK(stop_processing), app_data);
+
+  app_data->loading_modal->accept_btn =
+      GTK_BUTTON(gtk_builder_get_object(builder, "accept_btn"));
+  g_signal_connect(GTK_WIDGET(app_data->loading_modal->accept_btn), "clicked",
+                   G_CALLBACK(accept_result), app_data);
+
+  app_data->loading_modal->open_output_btn =
+      GTK_BUTTON(gtk_builder_get_object(builder, "open_output_btn"));
+  g_signal_connect(GTK_WIDGET(app_data->loading_modal->open_output_btn),
+                   "clicked", G_CALLBACK(open_output_file), app_data);
+
+  app_data->loading_modal->label =
+      GTK_LABEL(gtk_builder_get_object(builder, "progress_label"));
+  app_data->loading_modal->spinner =
+      GTK_SPINNER(gtk_builder_get_object(builder, "spinner"));
+
+  app_data->loading_modal->progress_bar =
+      GTK_PROGRESS_BAR(gtk_builder_get_object(builder, "progress_bar"));
+  gtk_progress_bar_set_fraction(app_data->loading_modal->progress_bar, 0);
+  g_object_unref(builder);
+
+  gtk_widget_set_visible(GTK_WIDGET(app_data->loading_modal->window), true);
+  gtk_window_present(GTK_WINDOW(app_data->loading_modal->window));
+}
+
+void update_loading_modal_to_rendering(LoadingModal *data) {
+  gtk_label_set_text(data->label, "rendering (2/2)...");
+}
+
+void update_loading_modal_to_finish(LoadingModal *data, char *output_file) {
+  gtk_label_set_text(data->label, "finished!");
+  gtk_widget_set_visible(GTK_WIDGET(data->spinner), false);
+  gtk_widget_set_visible(GTK_WIDGET(data->cancel_btn), false);
+  gtk_widget_set_visible(GTK_WIDGET(data->accept_btn), true);
+  gtk_widget_set_visible(GTK_WIDGET(data->open_output_btn), true);
+  gtk_picture_set_file(GTK_PICTURE(data->output_thumbail),
+                       g_file_new_for_path(output_file));
 }
 
 void select_font_action(GtkDropDown *drop, GParamSpec *pspec,
                         AppData *app_data) {
   app_data->selected_font = (char *)gtk_string_object_get_string(
       GTK_STRING_OBJECT(gtk_drop_down_get_selected_item(GTK_DROP_DOWN(drop))));
-
   g_print("%s", app_data->selected_font);
 }
 
-void init_image_processing(GtkButton *btn, GParamSpec *pspec,
-                           AppData *app_data) {
+void init_image_loading(GtkButton *btn, GParamSpec *pspec, AppData *app_data) {
+
+  open_loading_modal(app_data);
+
   g_print("-----Starting Parsing process\n"
           "File: %s\n"
           "Background color RGB(%" PRIu8 ",%" PRIu8 ",%" PRIu8 ")\n"
@@ -112,31 +242,14 @@ void init_image_processing(GtkButton *btn, GParamSpec *pspec,
   app_data->output_text_filepath =
       g_strdup_printf("%s.txt", app_data->input_filepath);
   app_data->output_filepath =
-      g_strdup_printf("%s.txt.jpg", app_data->input_filepath);
+      g_strdup_printf("%s.txt.png", app_data->input_filepath);
+  app_data->total_chars = (app_data->out_h) * (app_data->out_w);
   app_data->ascii_colors =
       malloc((app_data->out_h + 5) * (app_data->out_w + 5) * 3);
-
-  // if no issues happend while generating the text file, then finish
-  if (!parse2file(app_data->output_text_filepath, app_data->rgb_image,
-                  app_data->img_w, app_data->img_h,
-                  app_data->img_w / app_data->out_w,
-                  app_data->img_h / app_data->out_h, app_data->img_bpp,
-                  app_data->ascii_colors)) {
-    printf("ASCII conversion complete: %s\n", app_data->output_text_filepath);
-    // if rndr_flag is enable, then open a ncurses menu to select a font_family
-    // on the gresources and a background color (black = 0 or white = 255)
-    renderAsciiPNG(app_data->output_text_filepath, app_data->out_w,
-                   app_data->out_h, app_data->ascii_colors, app_data->bg_color,
-                   app_data->selected_font);
-    printf("PNG rendering complete\n");
-    free(app_data->ascii_colors);
-    app_data->ascii_colors = NULL;
-  } else {
-    // if error then free all the memory and exit
-    printf("Error during ASCII conversion\n");
-    free(app_data->ascii_colors);
-    app_data->ascii_colors = NULL;
-  }
+  // create a thread to speed up the processing
+  pthread_t t_bg;
+  pthread_create(&t_bg, NULL, start_on_background, (void *)app_data);
+  pthread_detach(t_bg);
 }
 
 void select_background_action(GtkColorDialogButton *color_btn,
@@ -169,7 +282,7 @@ void load_actions(AppData *app_data) {
   g_signal_connect(select_font_action_obj, "activate",
                    G_CALLBACK(select_font_action), app_data);
   g_signal_connect(init_process_action_obj, "activate",
-                   G_CALLBACK(init_image_processing), app_data);
+                   G_CALLBACK(init_image_loading), app_data);
 
   GActionMap *action_map = G_ACTION_MAP(app_data->app);
   g_action_map_add_action(action_map, G_ACTION(open_file_action_obj));

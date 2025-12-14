@@ -1,3 +1,4 @@
+#include "gtk/gtk.h"
 #include "types.h"
 #include <gio/gio.h>
 #include <glib.h>
@@ -34,8 +35,8 @@
  * @return 0 on success, 1 on failure
  */
 int renderAsciiPNG(char *output_filename, int output_w, int output_h,
-                   unsigned char *ascii_colors, RGB *bg_color,
-                   char *font_name) {
+                   unsigned char *ascii_colors, RGB *bg_color, char *font_name,
+                   LoadingModal *loading_modal, int total_chars) {
   // creare the img data
   float char_h = 32.0f;
   float char_w = char_h / 2;
@@ -151,6 +152,8 @@ int renderAsciiPNG(char *output_filename, int output_w, int output_h,
     }
     free(bitmap); // clean up the bitmap data
     x += (int)(advance * scale);
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(loading_modal->progress_bar),
+                                  (float)(counter / total_chars));
     counter++;
   }
 
@@ -255,6 +258,7 @@ static int get_text_from_file(char *filename, char **full_content) {
       *full_content = NULL;
       return 1;
     }
+    printf("%ld \n", fsize);
     (*full_content)[fsize] = '\0';
     fclose(fp);
     return 0;

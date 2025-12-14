@@ -14,11 +14,11 @@
 #include <render.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 // Global application and window references
 AppData *app_data;
+
+static const char *const regex_dec = "^[0-9]+$";
 
 static const char *font_options[] = {
     "CascadiaCodeNF-Bold.ttf",
@@ -31,7 +31,10 @@ static const char *font_options[] = {
     "JetBrainsMonoNL-Regular.ttf",
 };
 
-static const int default_percent_value = 6;
+static const int min_percent_value = 1;
+static const int default_percent_value = 2;
+static const int max_percent_value = 3;
+static const float slider_step_size = 0.5;
 
 static const RGB default_background_color = {255, 255, 255};
 
@@ -45,7 +48,6 @@ static void *on_activate(GtkApplication *app, gpointer user_data) {
   g_object_unref(builder);
 
   load_actions(app_data);
-
   gtk_application_add_window(GTK_APPLICATION(app_data->app),
                              GTK_WINDOW(app_data->active_win));
   gtk_window_present(GTK_WINDOW(app_data->active_win));
@@ -75,17 +77,24 @@ void init_globals(AppData *app_data, char *filepath) {
   app_data->selected_font = font_options[0];
   app_data->out_h = (int)(app_data->img_h * default_percent_value / 100);
   app_data->out_w = (int)(app_data->img_w * default_percent_value / 100);
+
+  app_data->max_out_h = (int)(app_data->img_h * max_percent_value / 100);
+  app_data->max_out_w = (int)(app_data->img_w * max_percent_value / 100) * 2;
+
+  app_data->min_out_h = (int)(app_data->img_h * min_percent_value / 100);
+  app_data->min_out_w = (int)(app_data->img_w * min_percent_value / 100);
+
   app_data->bg_color = g_new0(RGB, 1);
   app_data->bg_color->r = default_background_color.r;
   app_data->bg_color->g = default_background_color.g;
   app_data->bg_color->b = default_background_color.b;
 }
 
-int lauch_processing_window(char *filepath) {
+void lauch_processing_window(char *filepath) {
   stbi_flip_vertically_on_write(1);
 
   if (load_file_metadata(filepath, app_data)) {
-    return EXIT_FAILURE;
+    return;
   };
 
   if (app_data->active_win) {
@@ -135,7 +144,8 @@ int lauch_processing_window(char *filepath) {
       GTK_BOX(gtk_builder_get_object(builder, "percent_sizing_box"));
   // by percent (range)
   GtkScale *percent_scale = GTK_SCALE(
-      gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 1, 12, 0.01));
+      gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, min_percent_value,
+                               max_percent_value, slider_step_size));
   gtk_widget_set_hexpand(GTK_WIDGET(percent_scale), true);
   gtk_range_set_value(GTK_RANGE(percent_scale), default_percent_value);
   gtk_range_set_round_digits(GTK_RANGE(percent_scale), 1);
@@ -146,9 +156,15 @@ int lauch_processing_window(char *filepath) {
                    G_CALLBACK(handle_percent_sliding), app_data);
   gtk_box_append(app_data->percent_sizing_box, GTK_WIDGET(percent_scale));
 
-  // TODO: implement independient input (h x w)
+  GtkEntry *height_entry =
+      GTK_ENTRY(gtk_builder_get_object(builder, "height_entry"));
+  g_signal_connect(GTK_WIDGET(height_entry), "changed",
+                   G_CALLBACK(handle_manual_entry_height), app_data);
 
-  g_print("FLAAAAAAAAAAAG");
+  GtkEntry *width_entry =
+      GTK_ENTRY(gtk_builder_get_object(builder, "width_entry"));
+  g_signal_connect(GTK_WIDGET(width_entry), "changed",
+                   G_CALLBACK(handle_manual_entry_width), app_data);
 
   // background color dialog
   GdkRGBA color;
@@ -167,207 +183,28 @@ int lauch_processing_window(char *filepath) {
   gtk_application_add_window(GTK_APPLICATION(app_data->app),
                              GTK_WINDOW(app_data->active_win));
   gtk_window_present(GTK_WINDOW(app_data->active_win));
-  return EXIT_SUCCESS;
 }
 
-void on_shutdown(GtkApplication *app, gpointer user_data) { g_free(app_data); }
+void compile_decimal_regex(regex_t *regex) {
+  regcomp(regex, regex_dec, REG_EXTENDED);
+}
 
 int main(int argc, char **argv) {
   gtk_init();
+
   app_data = g_new0(AppData, 1);
+  app_data->loading_modal = g_new0(LoadingModal, 1);
   app_data->manual_sizing_enabled = false;
   app_data->bg_color = g_new0(RGB, 1);
   app_data->input_filepath = NULL;
+  compile_decimal_regex(&app_data->decimal_regex);
+
   app_data->app = gtk_application_new("org.riprtx.asciiParser",
                                       G_APPLICATION_DEFAULT_FLAGS);
   g_signal_connect(app_data->app, "activate", G_CALLBACK(on_activate),
-                   app_data);
-  g_signal_connect(app_data->app, "shutdown", G_CALLBACK(on_shutdown),
                    app_data);
   int status = g_application_run(G_APPLICATION(app_data->app), argc, argv);
   g_object_unref(app_data->app);
 
   return status;
 }
-
-/**
- * @brief Main program entry point
- * @param argc Argument count
- * @param argv Argument vector
- * @return Program exit status
- *
-int main(int argc, char **argv) {
-  // int variables
-  static int out_h = 0, out_w = 0; // output size w*h, in chars
-  static int reduct = 0;           // reduct percent, %6 by default
-  static int img_w = 0, img_h = 0; // input image size w*h, in pixels
-  static int img_bpp = 0;          // number of channels in the image
-
-  // int flags (verbose,help,render,auto)
-  static int verb_flag = 0, help_flag = 0, rndr_flag = 0, auto_flag = 0;
-
-  // char* variables (string/text)
-  static char *input_file = NULL;  // input filename
-  static char *output_file = NULL; // output filename
-  static char font_family[] = "";  // font family for rendering ascii image
-  static unsigned char *ascii_colors = NULL; // colors of chars for rendering
-  static uint8_t *rgb_image = NULL;          // image rgb data
-  // bg color of the ascii render (black or white)
-  static RGB bg_color_render = {0, 0, 0};
-
-  // accepted arguments:
-  // --input=<filename.jpg> or -i <filename.jpg>
-  // --output=<output_filename.jpg> or -o <output_filename.jpg>
-  // --render or -r
-  // --help or -h
-  // --auto or -a
-  // --verbose or -v
-  static struct option long_options[] = {{"input", required_argument, 0, 'i'},
-                                         {"output", required_argument, 0, 'o'},
-                                         {"render", no_argument, 0, 'r'},
-                                         {"verbose", no_argument, 0, 'v'},
-                                         {"auto", no_argument, 0, 'a'},
-                                         {"help", no_argument, 0, 'h'},
-                                         {0, 0, 0, 0}};
-
-  int opt; // aux variable for args options
-  while ((opt = getopt_long(argc, argv, "i:o:rvha", long_options, NULL)) !=
-         -1) {
-    switch (opt) {
-    case 'i':
-      input_file = optarg;
-      break;
-    case 'o':
-      output_file = optarg;
-      break;
-    case 'a':
-      reduct = 6;
-      auto_flag = 1;
-      break;
-    case 'v':
-      verb_flag = 1;
-      break;
-    case 'r':
-      rndr_flag = 1;
-      break;
-    case 'h':
-      help_flag = 1;
-      break;
-    case '?':
-      printf("Usage:\n");
-      printf(
-          "  $ ascii-parser -i filename.png -o output.txt 300 200 --render\n");
-      printf("Flags:\n");
-      printf(" -r, --render : Open a terminal menu to generate colored PNG of "
-             "ASCII art\n");
-      return 1;
-    default:
-      fprintf(stderr, "Argument processing error\n");
-      exit(EXIT_FAILURE);
-    }
-  }
-
-  // display help if requested
-  if (help_flag) {
-    printf("Usage: %s [OPTIONS]... [FILES]...\n", argv[0]);
-    printf("Generate ASCII files/images from input images\n\n");
-    printf("Options:\n");
-    printf("  -i, --input=file      Input image file\n");
-    printf("  -o, --output=file     Output file (txt/png)\n");
-    printf("  -v, --verbose         Show detailed information\n");
-    printf("  -a, --auto            Reduce image to 6%% of original size\n");
-    printf("  -r, --render          Generate PNG image of ASCII text\n");
-    printf("  -h, --help            Show this help message\n");
-    exit(EXIT_SUCCESS);
-  }
-
-  // validate input file
-  if (!input_file) {
-    fprintf(stderr, "Error: Input file required (-i)\n");
-    exit(EXIT_FAILURE);
-  }
-
-  // load image info
-  if (!stbi_info(input_file, &img_w, &img_h, &img_bpp)) {
-    printf("Error: Unsupported image format\n");
-    return EXIT_FAILURE;
-  }
-
-  // load image data
-  rgb_image = stbi_load(input_file, &img_w, &img_h, &img_bpp, 0);
-  if (verb_flag) {
-    printf("Image dimensions: %dx%d, BPP: %d\n", img_w, img_h, img_bpp);
-  }
-
-  // set & calculate output dimensions (for txt and png files)
-  if (auto_flag) {
-    // if auto_flag is enable set 6% of reduction by default
-    if (reduct < 0 || reduct > 10) {
-      stbi_image_free(rgb_image);
-      printf("Error: Reduction percentage must be between 1%% - 10%%\n");
-      return EXIT_FAILURE;
-    }
-    out_h = img_h * reduct / 100;
-    out_w = img_w * reduct / 100 * 2;
-  } else {
-    // either, the user must supply a width and height
-    // values that should be around the 2% and 15% of the input image, higher
-    // values may cause bugs and crashes
-    if (argc <= optind + 1) {
-      printf("Error: Output dimensions required\n");
-      return EXIT_FAILURE;
-    }
-    out_h = atoi(argv[optind]);
-    out_w = atoi(argv[optind + 1]);
-
-    if ((out_w > img_w * 0.25 || out_h > img_h * 0.25) ||
-        (out_w < img_w * 0.01 || out_h < img_h * 0.01)) {
-      printf("Error: Output dimensions exceed image size\n");
-      printf(
-          "Recommended values: 1%% - 25%% percent of the input image size.\n");
-      return EXIT_FAILURE;
-    }
-  }
-
-  // if there's no output size return EXIT_FAILURE
-  if (!out_w || !out_h) {
-    stbi_image_free(rgb_image);
-    printf("Error: Invalid output dimensions\n");
-    return EXIT_FAILURE;
-  }
-
-  if (verb_flag) {
-    printf("Output: %dx%d characters\n", out_h, out_w);
-    printf("Sampling steps: %dx%d\n", img_w / out_w, img_h / out_h);
-  }
-
-  // process the image
-  // allocate enought space in memory to save the colors of each char
-  ascii_colors = malloc((out_h + 5) * (out_w + 5) * 3);
-  // if no issues happend while generating the text file, then finish
-  if (!parse2file(output_file, rgb_image, img_w, img_h, img_w / out_w,
-                  img_h / out_h, img_bpp, ascii_colors)) {
-    printf("ASCII conversion complete: %s\n", output_file);
-    // if rndr_flag is enable, then open a ncurses menu to select a font_family
-    // on the gresources and a background color (black = 0 or white = 255)
-    if (rndr_flag) {
-      displayRenderMenu(&bg_color_render, font_family);
-      renderAsciiPNG(output_file, out_w, out_h, ascii_colors, bg_color_render,
-                     font_family);
-      printf("PNG rendering complete\n");
-    }
-    free(ascii_colors);
-    ascii_colors = NULL;
-  } else {
-    // if error then free all the memory and exit
-    printf("Error during ASCII conversion\n");
-    free(ascii_colors);
-    ascii_colors = NULL;
-    return EXIT_FAILURE;
-  }
-
-  stbi_image_free(rgb_image);
-  return EXIT_SUCCESS;
-}
-
- */

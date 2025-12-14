@@ -16,7 +16,8 @@
  */
 int renderAsciiPNG(char *output_filename, int output_w, int output_h,
                    unsigned char *ascii_colors, RGB *bg_color,
-                   char *font_family);
+                   char *font_family, LoadingModal *loading_modal,
+                   int total_chars);
 
 /*
  * @brief Load a stb_truetype font

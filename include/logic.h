@@ -20,5 +20,8 @@
  */
 int parse2file(char *output_filename, uint8_t *rgb_image, int width, int height,
                int w_step, int h_step, int channels,
-               unsigned char *ascii_colors);
+               unsigned char *ascii_colors, GtkProgressBar *progress_bar,
+               int total_chars, GtkWindow *dialog);
+
+void *start_on_background(void *arg);
 #endif // !LOGIC_H

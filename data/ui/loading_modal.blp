@@ -1,0 +1,54 @@
+using Gtk 4.0;
+
+Window loading_modal{
+  title:"loading";
+  resizable:false;
+  default-width:300;
+  modal:true;
+  
+  Box{
+    margin-top:12;
+    margin-bottom:12;
+    margin-start:12;
+    margin-end:12;
+    spacing:6;
+    orientation:vertical;
+
+    Picture output_img{
+      file:"/org/asciiparser/data/icons/img_placeholder.png";
+      height-request:100;
+      hexpand:true;
+    }
+     
+    Box{
+      orientation:horizontal;
+      spacing:6;
+      Label progress_label{
+        label:"parsing (1/2)...";
+        wrap:true;
+      }
+      Spinner spinner{
+        spinning:true;
+      }
+    }
+
+    ProgressBar progress_bar{
+      fraction:0.6;
+    }
+
+    Button cancel_btn{
+      label:"cancel";
+      css-classes:["destructive-action"];
+    }
+
+    Button accept_btn{
+      label:"accept";
+      visible:false;
+    }
+
+    Button open_output_btn{
+      label:"view";
+      visible:false;
+    }
+  }
+}
