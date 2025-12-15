@@ -155,7 +155,6 @@ void lauch_processing_window(char *filepath) {
   g_signal_connect(GTK_RANGE(percent_scale), "value-changed",
                    G_CALLBACK(handle_percent_sliding), app_data);
   gtk_box_append(app_data->percent_sizing_box, GTK_WIDGET(percent_scale));
-
   GtkEntry *height_entry =
       GTK_ENTRY(gtk_builder_get_object(builder, "height_entry"));
   g_signal_connect(GTK_WIDGET(height_entry), "changed",
@@ -177,6 +176,12 @@ void lauch_processing_window(char *filepath) {
   gtk_color_dialog_button_set_rgba(app_data->color_btn, &color);
   g_signal_connect(GTK_WIDGET(app_data->color_btn), "notify::rgba",
                    G_CALLBACK(select_background_action), app_data);
+
+  GtkCheckButton *create_ascii_file_checkbtn = GTK_CHECK_BUTTON(
+      gtk_builder_get_object(builder, "create_ascii_file_checkbtn"));
+  g_signal_connect(GTK_TOGGLE_BUTTON(create_ascii_file_checkbtn), "toggled",
+                   G_CALLBACK(toggle_create_ascii_file), app_data);
+
   // drop the builder
   g_object_unref(builder);
   // show app
@@ -197,6 +202,7 @@ int main(int argc, char **argv) {
   app_data->manual_sizing_enabled = false;
   app_data->bg_color = g_new0(RGB, 1);
   app_data->input_filepath = NULL;
+  app_data->create_ascii_file = true;
   compile_decimal_regex(&app_data->decimal_regex);
 
   app_data->app = gtk_application_new("org.riprtx.asciiParser",

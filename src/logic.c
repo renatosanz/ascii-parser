@@ -96,6 +96,11 @@ void *start_on_background(void *arg) {
     update_loading_modal_to_finish(app_data->loading_modal,
                                    app_data->output_filepath);
     printf("PNG rendering complete\n");
+
+    if (!app_data->create_ascii_file) {
+      remove_ascii_file(app_data);
+    }
+
     free(app_data->ascii_colors);
     app_data->ascii_colors = NULL;
   } else {

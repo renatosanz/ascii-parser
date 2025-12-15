@@ -48,6 +48,7 @@ typedef struct {
 
   unsigned char *ascii_colors;
   uint8_t *rgb_image;
+  gboolean create_ascii_file;
 
   regex_t decimal_regex;
 } AppData;

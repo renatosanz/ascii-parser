@@ -123,6 +123,10 @@ void toggle_manual_sizing(GSimpleAction *action, GVariant *parameter,
                            app_data->manual_sizing_enabled);
 }
 
+void toggle_create_ascii_file(GtkToggleButton *self, AppData *app_data) {
+  app_data->create_ascii_file = !app_data->create_ascii_file;
+}
+
 void open_new_file_dialog(GSimpleAction *action, GVariant *parameter,
                           AppData *app_data) {
   (void)action;
@@ -154,6 +158,16 @@ void open_output_file(GtkButton *btn, AppData *app_data) {
     execlp("xdg-open", "xdg-open", app_data->output_filepath, NULL);
   } else if (pid < 0) {
     perror("failed fork to open image viewer");
+  }
+}
+
+void remove_ascii_file(AppData *app_data) {
+  pid_t pid = fork();
+  if (pid == 0) {
+    execlp("rm", "rm", app_data->output_text_filepath, NULL);
+    printf("file %s deleted successfully", app_data->output_text_filepath);
+  } else if (pid < 0) {
+    perror("failed fork to remove ascii file");
   }
 }
 

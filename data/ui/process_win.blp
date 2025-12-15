@@ -18,10 +18,17 @@ Window process_win{
           orientation:vertical;
           spacing:12;
 
+          Button{
+            action-name:"app.open-file";
+            css-classes:["suggested-action","circular"];
+            label:"Open file";
+          }
+
           Button about_display_btn{
             label:"About";
             action-name:"app.display-about-dialog";
           }
+
           Button close_btn{
             label:"Close";
             action-name:"app.close-app";
@@ -116,7 +123,8 @@ Window process_win{
         Box{
           orientation:horizontal;
           spacing:6;
-          CheckButton{
+          CheckButton create_ascii_file_checkbtn{
+            active:true;
             Label{
               label:"Render ascii file";
             }
@@ -126,6 +134,7 @@ Window process_win{
     }
 
     Box{
+      spacing:5;
       Button{
         action-name:"app.process-image";
         css-classes:["suggested-action"];
@@ -139,6 +148,7 @@ Window process_win{
           }
         };
       }
+      
     }
   }
 }
