@@ -3,7 +3,7 @@ fn main() {}
 #[cfg(test)]
 mod test {
     use ab_glyph::{Font, PxScale};
-    use core::{
+    use base::{
         fonts::FontsMono,
         image::write_to_image,
         parser::{self, JP2A_GRADIENT, brightness_lightness, brightness_rec709},
