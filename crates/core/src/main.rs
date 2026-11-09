@@ -6,7 +6,7 @@ mod test {
     use core::{
         fonts::FontsMono,
         image::write_to_image,
-        parser::{self, brightness_lightness, brightness_rec709},
+        parser::{self, JP2A_GRADIENT, brightness_lightness, brightness_rec709},
         reductor,
         render::{self, black_and_white, image_coloring},
     };
@@ -99,6 +99,7 @@ mod test {
             &img_reducted,
             Some(format!("{}/reduction_rectagle.txt", _guard.test_img_path).to_string()),
             brightness_rec709,
+            JP2A_GRADIENT,
         );
     }
     #[test]
@@ -116,6 +117,7 @@ mod test {
             &img_reducted,
             Some(format!("{}/square_rectagle.txt", _guard.test_img_path).to_string()),
             brightness_rec709,
+            JP2A_GRADIENT,
         );
     }
 
@@ -143,7 +145,8 @@ mod test {
             .unwrap();
 
         // export to txt file
-        let text_rows = parser::export_to_text_file(&img_reducted, None, brightness_lightness);
+        let text_rows =
+            parser::export_to_text_file(&img_reducted, None, brightness_lightness, JP2A_GRADIENT);
 
         write_to_image(
             &img_reducted,

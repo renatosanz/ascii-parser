@@ -10,6 +10,7 @@ pub fn export_to_text_file<F>(
     img: &DynamicImage,
     filepath: Option<String>,
     brightness_fn: F,
+    gradient: &str,
 ) -> Vec<String>
 where
     F: Fn(Rgba<u8>) -> f32,
@@ -23,7 +24,7 @@ where
             row = String::new();
             last_y = y;
         }
-        let saved_char = brightness_to_char(brightness_fn(pixel));
+        let saved_char = brightness_to_char(brightness_fn(pixel), gradient);
         row.push(saved_char);
     }
     if let Some(path) = filepath {
@@ -34,9 +35,9 @@ where
     text
 }
 
-fn brightness_to_char(brightness: f32) -> char {
+fn brightness_to_char(brightness: f32, gradient: &str) -> char {
     // brightness: 0.0 = dark, 1.0 = light  →  dark gets '@', light gets ' '
-    let bytes = JP2A_GRADIENT.as_bytes();
+    let bytes = gradient.as_bytes();
     let idx = ((1.0 - brightness.clamp(0.0, 1.0)) * (bytes.len() - 1) as f32).round() as usize;
     bytes[idx] as char
 }
