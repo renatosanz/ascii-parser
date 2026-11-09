@@ -11,7 +11,7 @@ pub fn export_to_text_file<F>(
     filepath: Option<String>,
     brightness_fn: F,
     gradient: &str,
-) -> Vec<String>
+) -> std::io::Result<Vec<String>>
 where
     F: Fn(Rgba<u8>) -> f32,
 {
@@ -27,12 +27,15 @@ where
         let saved_char = brightness_to_char(brightness_fn(pixel), gradient);
         row.push(saved_char);
     }
+    if !row.is_empty() {
+        text.push(row);
+    }
     if let Some(path) = filepath {
         // generate txt file only if there's any path to export it
-        let mut file = File::create_new(Path::new(&path)).unwrap();
-        file.write_all(text.join("\n").as_bytes()).unwrap();
+        let mut file = File::create_new(Path::new(&path))?;
+        file.write_all(text.join("\n").as_bytes())?;
     }
-    text
+    Ok(text)
 }
 
 fn brightness_to_char(brightness: f32, gradient: &str) -> char {

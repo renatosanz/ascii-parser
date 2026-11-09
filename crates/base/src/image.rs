@@ -17,7 +17,8 @@ pub fn write_to_image<F>(
     scaled: PxScaleFont<&FontRef<'_>>,
     size: f32,
     coloring_fn: F,
-) where
+) -> Result<(), image::ImageError>
+where
     F: Fn(u32, u32, &DynamicImage) -> Rgba<u8>,
 {
     // create image with fixed size and black background
@@ -41,5 +42,6 @@ pub fn write_to_image<F>(
     );
 
     // save the modified canvas
-    rendered_img_black_and_white.save(path).unwrap();
+    rendered_img_black_and_white.save(path)?;
+    Ok(())
 }
