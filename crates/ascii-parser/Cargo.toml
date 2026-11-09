@@ -7,6 +7,11 @@ edition = "2024"
 # iced = "0.14.0"
 # iced_dialog = "0.14.0"
 
+base = { path = "../base" }
+cli = { path = "../cli" }
+
+
+
 [[bin]]
 name = "ascii-parser"
 path = "src/main.rs"
