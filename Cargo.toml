@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/core",
+    "crates/cli",
+    "crates/ascii-parser",
+]
+
+[workspace.package]
+license = "Creative Commons 4.0"
+authors = ["Renato Sanchez <renato.sanchez3103@gmail.com>"]
