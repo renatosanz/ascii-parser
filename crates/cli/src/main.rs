@@ -1,11 +1,10 @@
 use clap::{CommandFactory, Parser};
 use clap_complete::aot::generate;
-use cli::args::Args;
-use std::io;
+use cli::{args::Args, validation::is_image};
+use std::{io, path::Path};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    println!("Hello {:?}!", args);
 
     if let Some(supported_shell) = args.generate {
         let shell = supported_shell.to_shell();
@@ -17,8 +16,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    if args.filepath.is_none() {
+    if let Some(filepath) = args.filepath {
+        let path = Path::new(&filepath);
+
+        match is_image(path) {
+            Ok(true) => println!("Valid image!"),
+            Ok(false) => println!("Not an image."),
+            Err(e) => eprintln!("Error reading file: {}", e),
+        }
+    } else {
         Args::command().print_help()?;
+        return Ok(());
     }
 
     Ok(())
@@ -27,8 +35,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base::{
+        fonts::FontsMono,
+        parser::{BrightnessFn, ParsingGradient},
+        render::ColoringFn,
+    };
     use clap::error::ErrorKind;
-    use cli::args::{BrightnessFunction, ColoringFunction, SupportedShell, ValidFonts};
+    use cli::args::SupportedShell;
 
     fn parse(args: &[&str]) -> Result<Args, clap::Error> {
         Args::try_parse_from(args)
@@ -41,14 +54,16 @@ mod tests {
         assert_eq!(args.generate, None);
         assert_eq!(args.filepath, None);
         assert!(!args.debug);
-        assert!(!args.text_file);
-        assert_eq!(args.padding_x, 10);
-        assert_eq!(args.padding_y, 10);
+        assert_eq!(args.text_file_path, None);
+        assert_eq!(args.ascii_image_path, None);
+        assert_eq!(args.padding_x, 3);
+        assert_eq!(args.padding_y, 3);
         assert_eq!(args.max_size, 100);
         assert_eq!(args.font_size, 10);
-        assert_eq!(args.font_family, ValidFonts::FiraCodeBold);
-        assert_eq!(args.brightness, BrightnessFunction::Lightness);
-        assert_eq!(args.coloring, ColoringFunction::ImageBased);
+        assert_eq!(args.font_family, FontsMono::FiraCodeBold);
+        assert_eq!(args.gradient, ParsingGradient::Standard);
+        assert_eq!(args.brightness, BrightnessFn::Lightness);
+        assert_eq!(args.coloring, ColoringFn::ImageBased);
 
         Ok(())
     }
@@ -65,14 +80,23 @@ mod tests {
     }
 
     #[test]
-    fn parses_boolean_flags() -> Result<(), clap::Error> {
-        let short = parse(&["cli", "-d", "-t"])?;
+    fn parses_debug_and_output_paths() -> Result<(), clap::Error> {
+        let short = parse(&["cli", "-d", "-t", "out.txt", "-a", "out.png"])?;
         assert!(short.debug);
-        assert!(short.text_file);
+        assert_eq!(short.text_file_path.as_deref(), Some("out.txt"));
+        assert_eq!(short.ascii_image_path.as_deref(), Some("out.png"));
 
-        let long = parse(&["cli", "--debug", "--text-file"])?;
+        let long = parse(&[
+            "cli",
+            "--debug",
+            "--text-file-path",
+            "out.txt",
+            "--ascii-image-path",
+            "out.png",
+        ])?;
         assert!(long.debug);
-        assert!(long.text_file);
+        assert_eq!(long.text_file_path.as_deref(), Some("out.txt"));
+        assert_eq!(long.ascii_image_path.as_deref(), Some("out.png"));
 
         Ok(())
     }
@@ -108,7 +132,7 @@ mod tests {
         let args = parse(&[
             "cli",
             "--padding-x",
-            "5",
+            "3",
             "--padding-y",
             "30",
             "--max-size",
@@ -116,7 +140,7 @@ mod tests {
             "--font-size",
             "30",
         ])?;
-        assert_eq!(args.padding_x, 5);
+        assert_eq!(args.padding_x, 3);
         assert_eq!(args.padding_y, 30);
         assert_eq!(args.max_size, 50);
         assert_eq!(args.font_size, 30);
@@ -126,14 +150,14 @@ mod tests {
             "--padding-x",
             "30",
             "--padding-y",
-            "5",
+            "3",
             "--max-size",
             "300",
             "--font-size",
             "5",
         ])?;
         assert_eq!(args.padding_x, 30);
-        assert_eq!(args.padding_y, 5);
+        assert_eq!(args.padding_y, 3);
         assert_eq!(args.max_size, 300);
         assert_eq!(args.font_size, 5);
 
@@ -143,9 +167,9 @@ mod tests {
     #[test]
     fn rejects_values_outside_allowed_ranges() {
         let invalid = [
-            ["cli", "--padding-x", "4"],
+            ["cli", "--padding-x", "2"],
             ["cli", "--padding-x", "31"],
-            ["cli", "--padding-y", "4"],
+            ["cli", "--padding-y", "2"],
             ["cli", "--padding-y", "31"],
             ["cli", "--max-size", "49"],
             ["cli", "--max-size", "301"],
@@ -164,14 +188,14 @@ mod tests {
     #[test]
     fn parses_all_font_families() -> Result<(), clap::Error> {
         let cases = [
-            ("cascadia-code-bold", ValidFonts::CascadiaCodeBold),
-            ("cascadia-code-regular", ValidFonts::CascadiaCodeRegular),
-            ("fira-code-bold", ValidFonts::FiraCodeBold),
-            ("fira-code-regular", ValidFonts::FiraCodeRegular),
-            ("hack-bold", ValidFonts::HackBold),
-            ("hack-regular", ValidFonts::HackRegular),
-            ("jet-brains-mono-bold", ValidFonts::JetBrainsMonoBold),
-            ("jet-brains-mono-regular", ValidFonts::JetBrainsMonoRegular),
+            ("cascadia-code-bold", FontsMono::CascadiaCodeBold),
+            ("cascadia-code-regular", FontsMono::CascadiaCodeRegular),
+            ("fira-code-bold", FontsMono::FiraCodeBold),
+            ("fira-code-regular", FontsMono::FiraCodeRegular),
+            ("hack-bold", FontsMono::HackBold),
+            ("hack-regular", FontsMono::HackRegular),
+            ("jet-brains-mono-bold", FontsMono::JetBrainsMonoBold),
+            ("jet-brains-mono-regular", FontsMono::JetBrainsMonoRegular),
         ];
 
         for (value, expected) in cases {
@@ -180,7 +204,7 @@ mod tests {
         }
 
         let short = parse(&["cli", "-f", "hack-regular"])?;
-        assert_eq!(short.font_family, ValidFonts::HackRegular);
+        assert_eq!(short.font_family, FontsMono::HackRegular);
 
         Ok(())
     }
@@ -188,9 +212,9 @@ mod tests {
     #[test]
     fn parses_all_brightness_functions() -> Result<(), clap::Error> {
         let cases = [
-            ("rec709", BrightnessFunction::Rec709),
-            ("rec601", BrightnessFunction::Rec601),
-            ("lightness", BrightnessFunction::Lightness),
+            ("rec709", BrightnessFn::Rec709),
+            ("rec601", BrightnessFn::Rec601),
+            ("lightness", BrightnessFn::Lightness),
         ];
 
         for (value, expected) in cases {
@@ -199,7 +223,7 @@ mod tests {
         }
 
         let short = parse(&["cli", "-b", "rec601"])?;
-        assert_eq!(short.brightness, BrightnessFunction::Rec601);
+        assert_eq!(short.brightness, BrightnessFn::Rec601);
 
         Ok(())
     }
@@ -207,8 +231,8 @@ mod tests {
     #[test]
     fn parses_all_coloring_functions() -> Result<(), clap::Error> {
         let cases = [
-            ("black-and-white", ColoringFunction::BlackAndWhite),
-            ("image-based", ColoringFunction::ImageBased),
+            ("black-and-white", ColoringFn::BlackAndWhite),
+            ("image-based", ColoringFn::ImageBased),
         ];
 
         for (value, expected) in cases {
@@ -217,7 +241,25 @@ mod tests {
         }
 
         let short = parse(&["cli", "-c", "black-and-white"])?;
-        assert_eq!(short.coloring, ColoringFunction::BlackAndWhite);
+        assert_eq!(short.coloring, ColoringFn::BlackAndWhite);
+
+        Ok(())
+    }
+
+    #[test]
+    fn parses_all_gradients() -> Result<(), clap::Error> {
+        let cases = [
+            ("standard", ParsingGradient::Standard),
+            ("jp2a", ParsingGradient::JP2A),
+        ];
+
+        for (value, expected) in cases {
+            let args = parse(&["cli", "--gradient", value])?;
+            assert_eq!(args.gradient, expected);
+        }
+
+        let short = parse(&["cli", "-g", "jp2a"])?;
+        assert_eq!(short.gradient, ParsingGradient::JP2A);
 
         Ok(())
     }
@@ -285,6 +327,9 @@ mod tests {
             "image.jpg",
             "-d",
             "-t",
+            "image.txt",
+            "-a",
+            "image_ascii.png",
             "-x",
             "12",
             "-y",
@@ -295,6 +340,8 @@ mod tests {
             "16",
             "-f",
             "fira-code-regular",
+            "-g",
+            "jp2a",
             "-b",
             "rec709",
             "-c",
@@ -303,14 +350,16 @@ mod tests {
 
         assert_eq!(args.filepath.as_deref(), Some("image.jpg"));
         assert!(args.debug);
-        assert!(args.text_file);
+        assert_eq!(args.text_file_path.as_deref(), Some("image.txt"));
+        assert_eq!(args.ascii_image_path.as_deref(), Some("image_ascii.png"));
         assert_eq!(args.padding_x, 12);
         assert_eq!(args.padding_y, 14);
         assert_eq!(args.max_size, 120);
         assert_eq!(args.font_size, 16);
-        assert_eq!(args.font_family, ValidFonts::FiraCodeRegular);
-        assert_eq!(args.brightness, BrightnessFunction::Rec709);
-        assert_eq!(args.coloring, ColoringFunction::BlackAndWhite);
+        assert_eq!(args.font_family, FontsMono::FiraCodeRegular);
+        assert_eq!(args.gradient, ParsingGradient::JP2A);
+        assert_eq!(args.brightness, BrightnessFn::Rec709);
+        assert_eq!(args.coloring, ColoringFn::BlackAndWhite);
 
         Ok(())
     }

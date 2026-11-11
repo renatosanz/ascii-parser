@@ -1,34 +1,35 @@
 use ab_glyph::FontRef;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "clap", derive(clap::ValueEnum))]
 pub enum FontsMono {
-    CascadiaCodeNfBold,
-    CascadiaCodeNfRegular,
+    CascadiaCodeBold,
+    CascadiaCodeRegular,
     FiraCodeBold,
     FiraCodeRegular,
     HackBold,
     HackRegular,
-    JetBrainsMonoNlBold,
-    JetBrainsMonoNlRegular,
+    JetBrainsMonoBold,
+    JetBrainsMonoRegular,
 }
 
 impl FontsMono {
     pub fn bytes(self) -> &'static [u8] {
         match self {
-            FontsMono::CascadiaCodeNfBold => {
+            FontsMono::CascadiaCodeBold => {
                 include_bytes!("../assets/fonts/CascadiaCodeNF-Bold.ttf")
             }
-            FontsMono::CascadiaCodeNfRegular => {
+            FontsMono::CascadiaCodeRegular => {
                 include_bytes!("../assets/fonts/CascadiaCodeNF-Regular.ttf")
             }
             FontsMono::FiraCodeBold => include_bytes!("../assets/fonts/FiraCode-Bold.ttf"),
             FontsMono::FiraCodeRegular => include_bytes!("../assets/fonts/FiraCode-Regular.ttf"),
             FontsMono::HackBold => include_bytes!("../assets/fonts/Hack-Bold.ttf"),
             FontsMono::HackRegular => include_bytes!("../assets/fonts/Hack-Regular.ttf"),
-            FontsMono::JetBrainsMonoNlBold => {
+            FontsMono::JetBrainsMonoBold => {
                 include_bytes!("../assets/fonts/JetBrainsMonoNL-Bold.ttf")
             }
-            FontsMono::JetBrainsMonoNlRegular => {
+            FontsMono::JetBrainsMonoRegular => {
                 include_bytes!("../assets/fonts/JetBrainsMonoNL-Regular.ttf")
             }
         }
@@ -40,14 +41,14 @@ impl FontsMono {
 
     pub fn name(self) -> &'static str {
         match self {
-            FontsMono::CascadiaCodeNfBold => "Cascadia Code NF Bold",
-            FontsMono::CascadiaCodeNfRegular => "Cascadia Code NF Regular",
+            FontsMono::CascadiaCodeBold => "Cascadia Code NF Bold",
+            FontsMono::CascadiaCodeRegular => "Cascadia Code NF Regular",
             FontsMono::FiraCodeBold => "Fira Code Bold",
             FontsMono::FiraCodeRegular => "Fira Code Regular",
             FontsMono::HackBold => "Hack Bold",
             FontsMono::HackRegular => "Hack Regular",
-            FontsMono::JetBrainsMonoNlBold => "JetBrains Mono NL Bold",
-            FontsMono::JetBrainsMonoNlRegular => "JetBrains Mono NL Regular",
+            FontsMono::JetBrainsMonoBold => "JetBrains Mono NL Bold",
+            FontsMono::JetBrainsMonoRegular => "JetBrains Mono NL Regular",
         }
     }
 }

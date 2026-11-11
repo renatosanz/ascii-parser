@@ -1,7 +1,28 @@
+use std::{ops::Mul, path::Path};
+
 use ab_glyph::{Font, FontRef, Glyph, PxScaleFont, ScaleFont, point};
 use image::{DynamicImage, GenericImageView, Rgba, RgbaImage};
 
-pub fn draw_text_lines<F>(
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "clap", derive(clap::ValueEnum))]
+pub enum ColoringFn {
+    BlackAndWhite,
+    ImageBased,
+}
+
+impl ColoringFn {
+    pub fn fg_color(&self, x: u32, y: u32, img: &DynamicImage) -> Rgba<u8> {
+        match self {
+            ColoringFn::BlackAndWhite => Rgba([255, 255, 255, 255]),
+            ColoringFn::ImageBased => img.get_pixel(x, y),
+        }
+    }
+    pub fn bg_color(&self, x: u32, y: u32, img: &DynamicImage) -> Rgba<u8> {
+        todo!("add bg color fn")
+    }
+}
+
+fn draw_text_lines(
     img: &mut RgbaImage,
     reducted_img: &DynamicImage,
     font: &FontRef,
@@ -10,10 +31,8 @@ pub fn draw_text_lines<F>(
     y0: f32,
     scaled: PxScaleFont<&FontRef<'_>>,
     size: f32,
-    coloring_fn: F,
-) where
-    F: Fn(u32, u32, &DynamicImage) -> Rgba<u8>,
-{
+    coloring_fn: ColoringFn,
+) {
     let mut counter_x = 0;
     let mut counter_y = 0;
     let line_height = scaled.height() + scaled.line_gap();
@@ -23,7 +42,7 @@ pub fn draw_text_lines<F>(
         let y = y0 + i as f32 * line_height;
 
         for ch in line.chars() {
-            let color = coloring_fn(counter_x, counter_y, reducted_img);
+            let color = coloring_fn.fg_color(counter_x, counter_y, reducted_img);
             let glyph_id = scaled.glyph_id(ch);
             let glyph: Glyph = glyph_id.with_scale_and_position(size, point(x, y));
 
@@ -68,10 +87,40 @@ pub fn advance_height_ratio(scaled: PxScaleFont<&FontRef<'_>>, sample: char) -> 
     (advance, line_height, advance / line_height)
 }
 
-pub fn black_and_white(_: u32, _: u32, _: &DynamicImage) -> Rgba<u8> {
-    Rgba([255, 255, 255, 255])
-}
+pub fn write_to_image(
+    img_reducted: &DynamicImage,
+    path: &Path,
+    text_rows: &[String],
+    font: &FontRef,
+    padding_x: u32,
+    padding_y: u32,
+    char_w: u32,
+    char_h: u32,
+    scaled: PxScaleFont<&FontRef<'_>>,
+    size: f32,
+    coloring_fn: ColoringFn,
+) -> Result<(), image::ImageError> {
+    // create image with fixed size and black background
+    let mut rendered_img = RgbaImage::from_fn(
+        text_rows[0].len() as u32 * char_w + padding_x.mul(char_w),
+        text_rows.len() as u32 * char_h + padding_y.mul(char_h),
+        |_, _| Rgba([0, 0, 0, 255]),
+    );
 
-pub fn image_coloring(x: u32, y: u32, img: &DynamicImage) -> Rgba<u8> {
-    img.get_pixel(x, y)
+    // draw the text onto the image
+    draw_text_lines(
+        &mut rendered_img,
+        img_reducted,
+        &font,
+        &text_rows,
+        padding_x as f32, // X coordinate (padding from left)
+        padding_y as f32, // Y coordinate (padding from top)
+        scaled,
+        size,
+        coloring_fn,
+    );
+
+    // save the modified canvas
+    rendered_img.save(path)?;
+    Ok(())
 }

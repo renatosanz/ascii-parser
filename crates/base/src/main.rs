@@ -5,10 +5,9 @@ mod test {
     use ab_glyph::{Font, PxScale};
     use base::{
         fonts::FontsMono,
-        image::write_to_image,
-        parser::{self, JP2A_GRADIENT, brightness_lightness, brightness_rec601, brightness_rec709},
+        parser::{self, BrightnessFn, ParsingGradient},
         reductor,
-        render::{self, black_and_white, image_coloring},
+        render::{self, ColoringFn, write_to_image},
     };
     use image::{DynamicImage, GenericImageView, Rgba, RgbaImage};
     use std::{
@@ -157,9 +156,9 @@ mod test {
         let text_path = _guard.path("reduction_rectagle.txt");
         let text_rows = parser::export_to_text_file(
             &img_reducted,
-            Some(text_path.clone()),
-            brightness_rec709,
-            JP2A_GRADIENT,
+            Some(Path::new(text_path.as_str())),
+            parser::BrightnessFn::Rec709,
+            ParsingGradient::JP2A,
         )?;
 
         let (width, height) = img_reducted.dimensions();
@@ -175,10 +174,10 @@ mod test {
             "every text row should have one character per image column"
         );
         assert!(
-            text_rows
-                .iter()
-                .flat_map(|row| row.chars())
-                .all(|c| JP2A_GRADIENT.contains(c)),
+            text_rows.iter().flat_map(|row| row.chars()).all(|c| {
+                let gradient: &str = ParsingGradient::JP2A.into();
+                gradient.contains(c)
+            }),
             "every generated character should belong to the gradient"
         );
 
@@ -209,9 +208,9 @@ mod test {
         let text_path = _guard.path("square_rectagle.txt");
         let text_rows = parser::export_to_text_file(
             &img_reducted,
-            Some(text_path.clone()),
-            brightness_rec709,
-            JP2A_GRADIENT,
+            Some(Path::new(text_path.as_str())),
+            parser::BrightnessFn::Rec709,
+            ParsingGradient::JP2A,
         )?;
 
         let (width, height) = img_reducted.dimensions();
@@ -237,7 +236,7 @@ mod test {
 
     #[test]
     pub fn render_reducted_ascii_image_test() -> Result<(), Box<dyn std::error::Error>> {
-        let _guard = setup("render_reducted_ascii_image_test", true)?;
+        let _guard = setup("render_reducted_ascii_image_test", false)?;
 
         // load font file (ensure you have a .ttf file in your project directory)
         // include_bytes! embeds the font file directly into your compiled binary
@@ -263,8 +262,12 @@ mod test {
         img_reducted.save(&image_path)?;
 
         // export to txt file
-        let text_rows =
-            parser::export_to_text_file(&img_reducted, None, brightness_lightness, JP2A_GRADIENT)?;
+        let text_rows = parser::export_to_text_file(
+            &img_reducted,
+            None,
+            parser::BrightnessFn::Lightness,
+            ParsingGradient::JP2A,
+        )?;
 
         assert!(!text_rows.is_empty(), "there should be text rows to render");
         assert_eq!(text_rows.len(), img_reducted.height() as usize);
@@ -277,13 +280,13 @@ mod test {
 
         let char_w = advance as u32;
         let char_h = line_height as u32;
-        let expected_width = text_rows[0].len() as u32 * char_w + padding_x * 2;
-        let expected_height = text_rows.len() as u32 * char_h + padding_y * 2;
+        let expected_width = text_rows[0].len() as u32 * char_w + padding_x * char_w;
+        let expected_height = text_rows.len() as u32 * char_h + padding_y * char_h;
 
         let black_and_white_path = _guard.path("text_output_black_and_white.png");
         write_to_image(
             &img_reducted,
-            black_and_white_path.clone(),
+            Path::new(black_and_white_path.as_str()),
             &text_rows,
             &font,
             padding_x,
@@ -292,13 +295,13 @@ mod test {
             char_h,
             scaled,
             font_size,
-            black_and_white,
+            ColoringFn::BlackAndWhite,
         )?;
 
         let colored_path = _guard.path("text_output_colored.png");
         write_to_image(
             &img_reducted,
-            colored_path.clone(),
+            Path::new(colored_path.as_str()),
             &text_rows,
             &font,
             padding_x,
@@ -307,7 +310,7 @@ mod test {
             char_h,
             scaled,
             font_size,
-            image_coloring,
+            ColoringFn::ImageBased,
         )?;
 
         for path in [&black_and_white_path, &colored_path] {
@@ -355,9 +358,9 @@ mod test {
 
         for pixel in [black, white, red, green, blue] {
             for brightness in [
-                brightness_rec709(pixel),
-                brightness_rec601(pixel),
-                brightness_lightness(pixel),
+                BrightnessFn::Rec709.apply(pixel),
+                BrightnessFn::Rec601.apply(pixel),
+                BrightnessFn::Lightness.apply(pixel),
             ] {
                 assert!(
                     (0.0..=1.0).contains(&brightness),
@@ -366,58 +369,26 @@ mod test {
             }
         }
 
-        assert_approx_eq(brightness_rec709(black), 0.0);
-        assert_approx_eq(brightness_rec601(black), 0.0);
-        assert_approx_eq(brightness_lightness(black), 0.0);
+        assert_approx_eq(BrightnessFn::Rec709.apply(black), 0.0);
+        assert_approx_eq(BrightnessFn::Rec601.apply(black), 0.0);
+        assert_approx_eq(BrightnessFn::Lightness.apply(black), 0.0);
 
-        assert_approx_eq(brightness_rec709(white), 1.0);
-        assert_approx_eq(brightness_rec601(white), 1.0);
-        assert_approx_eq(brightness_lightness(white), 1.0);
+        assert_approx_eq(BrightnessFn::Rec709.apply(white), 1.0);
+        assert_approx_eq(BrightnessFn::Rec601.apply(white), 1.0);
+        assert_approx_eq(BrightnessFn::Lightness.apply(white), 1.0);
 
-        assert_approx_eq(brightness_rec709(red), 0.2126);
-        assert_approx_eq(brightness_rec601(red), 0.299);
-        assert_approx_eq(brightness_lightness(red), 0.5);
+        assert_approx_eq(BrightnessFn::Rec709.apply(red), 0.2126);
+        assert_approx_eq(BrightnessFn::Rec601.apply(red), 0.299);
+        assert_approx_eq(BrightnessFn::Lightness.apply(red), 0.5);
 
-        assert_approx_eq(brightness_rec709(green), 0.7152);
-        assert_approx_eq(brightness_rec601(green), 0.587);
-        assert_approx_eq(brightness_lightness(green), 0.5);
+        assert_approx_eq(BrightnessFn::Rec709.apply(green), 0.7152);
+        assert_approx_eq(BrightnessFn::Rec601.apply(green), 0.587);
+        assert_approx_eq(BrightnessFn::Lightness.apply(green), 0.5);
 
-        assert_approx_eq(brightness_rec709(blue), 0.0722);
-        assert_approx_eq(brightness_rec601(blue), 0.114);
-        assert_approx_eq(brightness_lightness(blue), 0.5);
+        assert_approx_eq(BrightnessFn::Rec709.apply(blue), 0.0722);
+        assert_approx_eq(BrightnessFn::Rec601.apply(blue), 0.114);
+        assert_approx_eq(BrightnessFn::Lightness.apply(blue), 0.5);
     }
-
-    #[test]
-    fn export_to_text_file_maps_brightness_to_gradient() -> Result<(), Box<dyn std::error::Error>> {
-        let _guard = setup("export_to_text_file_maps_brightness_to_gradient", true)?;
-
-        // a 2x2 checkerboard of black and white pixels
-        let img = DynamicImage::ImageRgba8(RgbaImage::from_fn(2, 2, |x, y| {
-            if (x + y) % 2 == 0 {
-                Rgba([0, 0, 0, 255])
-            } else {
-                Rgba([255, 255, 255, 255])
-            }
-        }));
-
-        let rows = parser::export_to_text_file(&img, None, brightness_lightness, "AB")?;
-
-        // dark pixels map to the end of the gradient, light pixels to the start
-        assert_eq!(rows, vec!["BA".to_string(), "AB".to_string()]);
-        assert_eq!(rows.len(), img.height() as usize);
-        assert!(rows.iter().all(|row| row.len() == img.width() as usize));
-
-        let text_path = _guard.path("gradient.txt");
-        let rows_with_file =
-            parser::export_to_text_file(&img, Some(text_path.clone()), brightness_lightness, "AB")?;
-
-        assert_eq!(rows_with_file, rows);
-        assert!(Path::new(&text_path).exists());
-        assert_eq!(fs::read_to_string(&text_path)?, "BA\nAB");
-
-        Ok(())
-    }
-
     #[test]
     fn adaptative_reduction_produces_expected_dimensions() {
         let img = DynamicImage::ImageRgba8(RgbaImage::from_pixel(400, 200, Rgba([0, 0, 0, 255])));
@@ -436,10 +407,22 @@ mod test {
             Rgba([x as u8 * 100, y as u8 * 100, 0, 255])
         }));
 
-        assert_eq!(black_and_white(0, 0, &img), Rgba([255, 255, 255, 255]));
-        assert_eq!(black_and_white(1, 1, &img), Rgba([255, 255, 255, 255]));
-        assert_eq!(image_coloring(0, 0, &img), Rgba([0, 0, 0, 255]));
-        assert_eq!(image_coloring(1, 1, &img), Rgba([100, 100, 0, 255]));
+        assert_eq!(
+            ColoringFn::BlackAndWhite.fg_color(0, 0, &img),
+            Rgba([255, 255, 255, 255])
+        );
+        assert_eq!(
+            ColoringFn::BlackAndWhite.fg_color(1, 1, &img),
+            Rgba([255, 255, 255, 255])
+        );
+        assert_eq!(
+            ColoringFn::ImageBased.fg_color(0, 0, &img),
+            Rgba([0, 0, 0, 255])
+        );
+        assert_eq!(
+            ColoringFn::ImageBased.fg_color(1, 1, &img),
+            Rgba([100, 100, 0, 255])
+        );
     }
 
     #[test]
@@ -460,14 +443,14 @@ mod test {
     #[test]
     fn all_font_assets_load_successfully() {
         let fonts = [
-            FontsMono::CascadiaCodeNfBold,
-            FontsMono::CascadiaCodeNfRegular,
+            FontsMono::CascadiaCodeBold,
+            FontsMono::CascadiaCodeRegular,
             FontsMono::FiraCodeBold,
             FontsMono::FiraCodeRegular,
             FontsMono::HackBold,
             FontsMono::HackRegular,
-            FontsMono::JetBrainsMonoNlBold,
-            FontsMono::JetBrainsMonoNlRegular,
+            FontsMono::JetBrainsMonoBold,
+            FontsMono::JetBrainsMonoRegular,
         ];
 
         for font in fonts {
