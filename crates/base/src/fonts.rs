@@ -36,6 +36,7 @@ impl FontsMono {
     }
 
     pub fn font_ref(self) -> Result<FontRef<'static>, ab_glyph::InvalidFont> {
+        log::info!("Loading font: {}", self.name());
         FontRef::try_from_slice(self.bytes())
     }
 

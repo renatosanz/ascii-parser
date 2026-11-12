@@ -15,12 +15,15 @@ fn main() -> AppResult<()> {
         simple_logger::init_with_level(log::Level::Error).unwrap();
     }
 
+    log::info!("Starting ascii-parser");
+
     // generate the completations for the CLI
     if let Some(supported_shell) = args.generate {
         let shell = supported_shell.to_shell();
         let mut cmd = Args::command(); // extract the Clap Command struct
         let bin_name = cmd.get_name().to_string();
 
+        log::info!("Generating {shell:?} completions for {bin_name}");
         // stream the completion script directly to standard output
         generate(shell, &mut cmd, bin_name, &mut io::stdout());
         return Ok(());
@@ -33,27 +36,36 @@ fn main() -> AppResult<()> {
 
     // filepath is required just if there's no --generate param
     if args.filepath.is_none() {
+        log::warn!("No input file provided, showing help");
         let _ = Args::command().print_help();
         std::process::exit(1);
     }
 
     let filepath = args.filepath.unwrap();
     let original_image_path = Path::new(&filepath);
+    log::info!("Input image: {}", original_image_path.display());
 
-    original_image_path
-        .exists()
-        .ok_or(AppError::InvalidFile("Non existing file."))?;
+    if !original_image_path.exists() {
+        log::error!(
+            "Input file does not exist: {}",
+            original_image_path.display()
+        );
+        return Err(AppError::InvalidFile("Non existing file."));
+    }
 
     // verify the filetype
     if !is_image(original_image_path).map_err(|e| {
-        log::error!("Error reading file: {}", e);
+        log::error!(
+            "Failed to read input file {}: {e}",
+            original_image_path.display()
+        );
         AppError::InvalidFileType
     })? {
-        log::info!("Invalid image type!");
+        log::error!("Unsupported image type: {}", original_image_path.display());
         return Err(AppError::InvalidFileType);
     }
 
-    log::info!("Valid image type: {original_image_path:?}");
+    log::info!("Input file is a valid image");
 
     let ascii_image_path = match args.ascii_image_path {
         Some(p) => PathBuf::from(p),
@@ -71,6 +83,7 @@ fn main() -> AppResult<()> {
         None => {
             // if --skip-txt flags is active override the path recieved
             if args.skip_txt {
+                log::info!("Text output disabled by --skip-txt");
                 None
             } else {
                 let stem = original_image_path
@@ -82,19 +95,26 @@ fn main() -> AppResult<()> {
         }
     };
 
-    log::info!("ascii_image_path {:?}", ascii_image_path);
-    log::info!("text_file_path {:?}", text_file_path);
+    log::info!("Ascii image output: {}", ascii_image_path.display());
+    match text_file_path.as_ref() {
+        Some(path) => log::info!("Text output: {}", path.display()),
+        None => log::info!("Text output disabled"),
+    }
 
     // verify if there's some collision
     if !args.allow_override {
         if ascii_image_path.exists() {
+            log::error!("Output file already exists: {}", ascii_image_path.display());
             return Err(AppError::FileCollision(ascii_image_path));
         }
         if let Some(path) = text_file_path.clone() {
             if path.exists() {
+                log::error!("Output file already exists: {}", path.display());
                 return Err(AppError::FileCollision(path));
             }
         }
+    } else {
+        log::warn!("Overwrite enabled, existing output files may be replaced");
     }
 
     base::process_image(
@@ -110,8 +130,12 @@ fn main() -> AppResult<()> {
         args.coloring,
         args.brightness,
     )
-    .map_err(|e| AppError::ProcessingError(e.to_string()))?;
+    .map_err(|e| {
+        log::error!("Image processing failed: {e}");
+        AppError::ProcessingError(e.to_string())
+    })?;
 
+    log::info!("Done");
     Ok(())
 }
 

@@ -38,6 +38,7 @@ fn draw_text_lines(
 ) {
     let mut counter_x = 0;
     let mut counter_y = 0;
+    let mut skipped_glyphs = 0u32;
     let line_height = scaled.height() + scaled.line_gap();
 
     for (i, line) in lines.iter().enumerate() {
@@ -73,12 +74,18 @@ fn draw_text_lines(
                         );
                     }
                 });
+            } else {
+                skipped_glyphs += 1;
             }
             x += scaled.h_advance(glyph_id);
             counter_x += 1;
         }
         counter_y += 1;
         counter_x = 0;
+    }
+
+    if skipped_glyphs > 0 {
+        log::warn!("Skipped {skipped_glyphs} characters without a glyph outline");
     }
 }
 
@@ -103,12 +110,30 @@ pub fn write_to_image(
     size: f32,
     coloring_fn: ColoringFn,
 ) -> Result<(), image::ImageError> {
-    // create image with fixed size and black background
-    let mut rendered_img = RgbaImage::from_fn(
-        text_rows[0].len() as u32 * char_w + padding_x.mul(char_w).mul(2),
-        (text_rows.len() - 1) as u32 * char_h + padding_y.mul(char_h).mul(2),
-        |_, _| Rgba([0, 0, 0, 255]),
+    if text_rows.is_empty() {
+        log::error!("Cannot render an ascii image without text rows");
+        return Err(image::ImageError::IoError(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "cannot render an ascii image without text rows",
+        )));
+    }
+
+    let canvas_width = text_rows[0].len() as u32 * char_w + padding_x.mul(char_w).mul(2);
+    let canvas_height = (text_rows.len() - 1) as u32 * char_h + padding_y.mul(char_h).mul(2);
+    log::info!(
+        "Rendering ascii image: {} rows x {} chars, cell={}x{}px, padding=({},{}), coloring={coloring_fn:?}",
+        text_rows.len(),
+        text_rows[0].len(),
+        char_w,
+        char_h,
+        padding_x,
+        padding_y
     );
+    log::info!("Canvas size: {canvas_width}x{canvas_height}px");
+
+    // create image with fixed size and black background
+    let mut rendered_img =
+        RgbaImage::from_fn(canvas_width, canvas_height, |_, _| Rgba([0, 0, 0, 255]));
 
     // draw the text onto the image
     draw_text_lines(
@@ -124,6 +149,10 @@ pub fn write_to_image(
     );
 
     // save the modified canvas
-    rendered_img.save(path)?;
+    rendered_img.save(path).map_err(|error| {
+        log::error!("Failed to save ascii image {}: {error}", path.display());
+        error
+    })?;
+    log::info!("Ascii image saved to {}", path.display());
     Ok(())
 }

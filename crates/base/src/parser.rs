@@ -62,6 +62,11 @@ pub fn export_to_text_file(
     brightness_fn: BrightnessFn,
     gradient: ParsingGradient,
 ) -> std::io::Result<Vec<String>> {
+    let (width, height) = img.dimensions();
+    log::info!(
+        "Converting image to text: {width}x{height}px, gradient={gradient:?}, brightness={brightness_fn:?}"
+    );
+
     let mut last_y = 0;
     let mut row = String::new();
     let mut text: Vec<String> = vec![];
@@ -77,11 +82,27 @@ pub fn export_to_text_file(
     if !row.is_empty() {
         text.push(row);
     }
+    if text.is_empty() {
+        log::warn!("No text rows were generated from the image");
+    }
+
     if let Some(path) = filepath {
         // generate txt file only if there's any path to export it
-        let mut file = File::create(Path::new(&path))?;
-        file.write_all(text.join("\n").as_bytes())?;
+        log::info!("Writing text output to {}", path.display());
+        let mut file = File::create(Path::new(&path)).map_err(|error| {
+            log::error!("Failed to create text file {}: {error}", path.display());
+            error
+        })?;
+        file.write_all(text.join("\n").as_bytes())
+            .map_err(|error| {
+                log::error!("Failed to write text file {}: {error}", path.display());
+                error
+            })?;
+        log::info!("Text output written ({} rows)", text.len());
+    } else {
+        log::info!("No text output path provided, skipping text file");
     }
+
     Ok(text)
 }
 
