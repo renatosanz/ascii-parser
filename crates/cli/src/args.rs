@@ -27,7 +27,7 @@ impl SupportedShell {
 /// A image parser that converts images to ASCII characters,
 /// capable of generating both text files and rendered PNG images.
 #[derive(Debug, Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(name = "ascii-parser-cli", author, version, about, long_about = None)]
 pub struct Args {
     /// Generate shell completions
     #[arg(long, value_name = "SHELL")]

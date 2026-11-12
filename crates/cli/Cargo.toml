@@ -14,5 +14,5 @@ log = "0.4.35"
 
 
 [[bin]]
-name = "cli"
+name = "ascii-parser-cli"
 path = "src/main.rs"

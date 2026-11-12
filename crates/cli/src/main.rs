@@ -15,7 +15,7 @@ fn main() -> AppResult<()> {
         simple_logger::init_with_level(log::Level::Error).unwrap();
     }
 
-    log::info!("Starting ascii-parser");
+    log::info!("Starting ascii-parser-cli");
 
     // generate the completations for the CLI
     if let Some(supported_shell) = args.generate {
