@@ -1,33 +1,116 @@
 use clap::{CommandFactory, Parser};
 use clap_complete::aot::generate;
-use cli::{args::Args, validation::is_image};
-use std::{io, path::Path};
+use cli::{AppError, AppResult, args::Args, validation::is_image};
+use std::{
+    io::{self},
+    path::{Path, PathBuf},
+};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> AppResult<()> {
     let args = Args::parse();
 
+    if args.debug {
+        simple_logger::init_with_level(log::Level::Trace).unwrap();
+    } else {
+        simple_logger::init_with_level(log::Level::Error).unwrap();
+    }
+
+    // generate the completations for the CLI
     if let Some(supported_shell) = args.generate {
         let shell = supported_shell.to_shell();
-        let mut cmd = Args::command(); // Extract the Clap Command struct
+        let mut cmd = Args::command(); // extract the Clap Command struct
         let bin_name = cmd.get_name().to_string();
 
-        // Stream the completion script directly to standard output
+        // stream the completion script directly to standard output
         generate(shell, &mut cmd, bin_name, &mut io::stdout());
         return Ok(());
     }
 
-    if let Some(filepath) = args.filepath {
-        let path = Path::new(&filepath);
+    // check supported filetypes by extensions and mime type
+    assert!(infer::is_supported("jpg"));
+    assert!(infer::is_supported("png"));
+    assert!(infer::is_mime_supported("image/png"));
 
-        match is_image(path) {
-            Ok(true) => println!("Valid image!"),
-            Ok(false) => println!("Not an image."),
-            Err(e) => eprintln!("Error reading file: {}", e),
-        }
-    } else {
-        Args::command().print_help()?;
-        return Ok(());
+    // filepath is required just if there's no --generate param
+    if args.filepath.is_none() {
+        let _ = Args::command().print_help();
+        std::process::exit(1);
     }
+
+    let filepath = args.filepath.unwrap();
+    let original_image_path = Path::new(&filepath);
+
+    original_image_path
+        .exists()
+        .ok_or(AppError::InvalidFile("Non existing file."))?;
+
+    // verify the filetype
+    if !is_image(original_image_path).map_err(|e| {
+        log::error!("Error reading file: {}", e);
+        AppError::InvalidFileType
+    })? {
+        log::info!("Invalid image type!");
+        return Err(AppError::InvalidFileType);
+    }
+
+    log::info!("Valid image type: {original_image_path:?}");
+
+    let ascii_image_path = match args.ascii_image_path {
+        Some(p) => PathBuf::from(p),
+        None => {
+            let stem = original_image_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .ok_or(AppError::InvalidFile("Invalid file stem."))?;
+            original_image_path.with_file_name(format!("{stem}_ascii.png"))
+        }
+    };
+
+    let text_file_path = match args.text_file_path {
+        Some(p) => Some(PathBuf::from(p)),
+        None => {
+            // if --skip-txt flags is active override the path recieved
+            if args.skip_txt {
+                None
+            } else {
+                let stem = original_image_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .ok_or(AppError::InvalidFile("Invalid file stem."))?;
+                Some(original_image_path.with_file_name(format!("{stem}.txt")))
+            }
+        }
+    };
+
+    log::info!("ascii_image_path {:?}", ascii_image_path);
+    log::info!("text_file_path {:?}", text_file_path);
+
+    // verify if there's some collision
+    if !args.allow_override {
+        if ascii_image_path.exists() {
+            return Err(AppError::FileCollision(ascii_image_path));
+        }
+        if let Some(path) = text_file_path.clone() {
+            if path.exists() {
+                return Err(AppError::FileCollision(path));
+            }
+        }
+    }
+
+    base::process_image(
+        original_image_path,
+        &ascii_image_path,
+        text_file_path,
+        args.max_size,
+        args.font_family,
+        args.font_size as f32,
+        args.padding_x,
+        args.padding_y,
+        args.gradient,
+        args.coloring,
+        args.brightness,
+    )
+    .map_err(|e| AppError::ProcessingError(e.to_string()))?;
 
     Ok(())
 }
@@ -132,7 +215,7 @@ mod tests {
         let args = parse(&[
             "cli",
             "--padding-x",
-            "3",
+            "0",
             "--padding-y",
             "30",
             "--max-size",
@@ -140,7 +223,7 @@ mod tests {
             "--font-size",
             "30",
         ])?;
-        assert_eq!(args.padding_x, 3);
+        assert_eq!(args.padding_x, 0);
         assert_eq!(args.padding_y, 30);
         assert_eq!(args.max_size, 50);
         assert_eq!(args.font_size, 30);
@@ -150,15 +233,15 @@ mod tests {
             "--padding-x",
             "30",
             "--padding-y",
-            "3",
+            "0",
             "--max-size",
-            "300",
+            "400",
             "--font-size",
             "5",
         ])?;
         assert_eq!(args.padding_x, 30);
-        assert_eq!(args.padding_y, 3);
-        assert_eq!(args.max_size, 300);
+        assert_eq!(args.padding_y, 0);
+        assert_eq!(args.max_size, 400);
         assert_eq!(args.font_size, 5);
 
         Ok(())
@@ -167,12 +250,10 @@ mod tests {
     #[test]
     fn rejects_values_outside_allowed_ranges() {
         let invalid = [
-            ["cli", "--padding-x", "2"],
             ["cli", "--padding-x", "31"],
-            ["cli", "--padding-y", "2"],
             ["cli", "--padding-y", "31"],
             ["cli", "--max-size", "49"],
-            ["cli", "--max-size", "301"],
+            ["cli", "--max-size", "401"],
             ["cli", "--font-size", "4"],
             ["cli", "--font-size", "31"],
         ];

@@ -8,6 +8,7 @@ ab_glyph = "0.2.32"
 image = "0.25.10"
 imageproc = "0.27.0"
 clap = { version = "4", features = ["derive"], optional = true }
+log = "0.4.35"
 
 [features]
 clap = ["dep:clap"]

@@ -45,6 +45,14 @@ pub struct Args {
     #[arg(short, long, action = ArgAction::SetTrue)]
     pub debug: bool,
 
+    /// Skip file collision validation
+    #[arg(short='o', long="override", action = ArgAction::SetTrue)]
+    pub allow_override: bool,
+
+    /// Skip <image>.txt generation, override --text-file-path <PATH> param
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub skip_txt: bool,
+
     /// Generate <image>.txt file aside the image file
     #[arg(short, long)]
     pub text_file_path: Option<String>,
@@ -54,15 +62,15 @@ pub struct Args {
     pub ascii_image_path: Option<String>,
 
     /// Padding on X axis, both sides (left, right)
-    #[arg(short = 'x', long, default_value_t = 3,value_parser = clap::value_parser!(u32).range(3..=30))]
+    #[arg(short = 'x', long, default_value_t = 3,value_parser = clap::value_parser!(u32).range(0..=30))]
     pub padding_x: u32,
 
     /// Padding on Y axis, both sides (top, bottom)
-    #[arg(short = 'y', long, default_value_t = 3, value_parser = clap::value_parser!(u32).range(3..=30))]
+    #[arg(short = 'y', long, default_value_t = 3, value_parser = clap::value_parser!(u32).range(0..=30))]
     pub padding_y: u32,
 
     /// Max side size for ASCII rendered image and txt file.
-    #[arg(short, long, default_value_t = 100, value_parser = clap::value_parser!(u32).range(50..=300))]
+    #[arg(short, long, default_value_t = 100, value_parser = clap::value_parser!(u32).range(50..=400))]
     pub max_size: u32,
 
     /// Font size (for ascii image rendering)

@@ -5,12 +5,13 @@ edition = "2024"
 
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"] }
+base = { path = "../base", features = ["clap"] }
 clap_complete = "4"
 infer = "0.16"
 thiserror = "2.0.17"
-base = { path = "../base", features = ["clap"] }
+simple_logger = "5.2.0"
+log = "0.4.35"
 
-[lib]
 
 [[bin]]
 name = "cli"
