@@ -156,7 +156,7 @@ mod test {
         let text_path = _guard.path("reduction_rectagle.txt");
         let text_rows = parser::export_to_text_file(
             &img_reducted,
-            Some(Path::new(text_path.as_str())),
+            Some(PathBuf::from(text_path.as_str())),
             parser::BrightnessFn::Rec709,
             ParsingGradient::JP2A,
         )?;
@@ -208,7 +208,7 @@ mod test {
         let text_path = _guard.path("square_rectagle.txt");
         let text_rows = parser::export_to_text_file(
             &img_reducted,
-            Some(Path::new(text_path.as_str())),
+            Some(PathBuf::from(text_path.as_str())),
             parser::BrightnessFn::Rec709,
             ParsingGradient::JP2A,
         )?;

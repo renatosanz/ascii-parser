@@ -1,4 +1,8 @@
-use std::{fs::File, io::Write, path::Path};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use image::{DynamicImage, GenericImageView, Rgba};
 
@@ -54,7 +58,7 @@ impl BrightnessFn {
 
 pub fn export_to_text_file(
     img: &DynamicImage,
-    filepath: Option<&Path>,
+    filepath: Option<PathBuf>,
     brightness_fn: BrightnessFn,
     gradient: ParsingGradient,
 ) -> std::io::Result<Vec<String>> {
@@ -75,7 +79,7 @@ pub fn export_to_text_file(
     }
     if let Some(path) = filepath {
         // generate txt file only if there's any path to export it
-        let mut file = File::create_new(Path::new(&path))?;
+        let mut file = File::create(Path::new(&path))?;
         file.write_all(text.join("\n").as_bytes())?;
     }
     Ok(text)

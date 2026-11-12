@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use ab_glyph::{Font, PxScale};
 
@@ -16,7 +16,7 @@ pub mod render;
 pub fn process_image(
     original_image_path: &Path,
     ascii_image_path: &Path,
-    text_file_path: Option<&Path>,
+    text_file_path: Option<PathBuf>,
     max_side_size: u32,
     font: FontsMono,
     font_size: f32,
