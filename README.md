@@ -1,140 +1,191 @@
 # ascii-parser
 
-![Banner](banner_ascii-parser.png)
+A Rust image parser that converts images into ASCII characters, producing both plain-text output and rendered PNG images.
 
-A image parser that converts images to ASCII characters, capable of generating both text files and rendered PNG images. Image formats supported (JPEG, PNG, WebP, BMP). Please check out my [blog](https://riprtx.netlify.app/) for more information.
+> **Project scope:** This repository focuses on two projects:
+> - `ascii-parser-cli` — the command-line interface, available now
+> - `ascii-parser` — a GUI application, coming soon
 
-> NOTE: to get better results is prefered to convert the input image to JPEG format, this 'cause some PNG or image formats within transparency pixels may generate bugs.
+> **NOTE:** For best results, prefer JPEG input. Images with transparency (some PNGs) may produce unexpected output.
 
 ## Features
 
-- Convert images to ASCII art
-- Generate text files with ASCII output
-- Render ASCII art back to PNG images
-- Adjustable output resolution
-- Automatic size reduction option
+- Convert images to ASCII text
+- Render ASCII art back to PNG
+- Configurable output size, padding, font family, and font size
+- Multiple character gradients
+- Multiple brightness functions
+- Black-and-white or image-based coloring
+- Automatic output paths based on the input file
+- Collision protection with an override flag
+- Shell completion generation
+- Structured logging with `--debug`
+
+## Requirements
+
+- A recent stable Rust toolchain (edition 2024)
+- Cargo
 
 ## Installation
 
-### Build from Source
+### Build from source
 
+```bash
+git clone https://github.com/renatosanz/ascii-parser.git
+cd ascii-parser
+cargo build --release
+```
 
-For test it: 
+The binary is written to `target/release/ascii-parser-cli`.
+
+### Install with Cargo
+
 ```bash
-meson setup --wipe build && meson compile -C build
+cargo install --path crates/cli
 ```
-For installation: 
-```bash
-meson setup --wipe build && meson install -C build
-```
+
+This installs the `ascii-parser-cli` binary.
 
 ## Usage
 
-```bash
-ascii-parser -i input.jpg -o output.txt [width] [height] [options]
+```text
+ascii-parser-cli [OPTIONS]
 ```
 
-### Basic Example
+Run from the workspace without installing:
 
 ```bash
-ascii-parser -i examples/shoe.jpeg -o examples/shoe.txt 30 90 -r
-xdg-open examples/shoe.txt.png
+cargo run -p cli -- [OPTIONS]
 ```
+
+Input files are detected by content rather than extension. Common formats include JPEG, PNG, WebP, and BMP.
+
+### Quick start
+
+```bash
+ascii-parser-cli -p image.jpg
+```
+
+This writes two files next to the input image:
+
+- `image.txt` — the ASCII text output
+- `image_ascii.png` — the rendered ASCII image
 
 ### Options
 
-| Flag              | Description                                          |
-| ----------------- | ---------------------------------------------------- |
-| `-i`, `--input`   | Input image file (JPEG)                              |
-| `-o`, `--output`  | Output file (will generate .txt and optionally .png) |
-| `-a`, `--auto`    | Automatically reduce image to 6% of original size    |
-| `-r`, `--render`  | Generate PNG image of the ASCII text                 |
-| `-v`, `--verbose` | Show detailed processing information                 |
-| `-h`, `--help`    | Show help message                                    |
+| Option | Description | Default |
+| ------ | ----------- | ------- |
+| `--generate <SHELL>` | Generate shell completions and exit (`bash`, `elvish`, `fish`, `power-shell`, `zsh`) | |
+| `-p`, `--filepath <FILEPATH>` | Input image path. Required unless `--generate` is used | |
+| `-d`, `--debug` | Enable verbose logging at trace level | off |
+| `-o`, `--override` | Skip output collision validation and overwrite existing files | off |
+| `--skip-txt` | Skip the default `<image>.txt` output | off |
+| `-t`, `--text-file-path <PATH>` | Text output path | `<image>.txt` |
+| `-a`, `--ascii-image-path <PATH>` | Rendered PNG output path | `<image>_ascii.png` |
+| `-x`, `--padding-x <0-30>` | Horizontal padding, in character cells, on both sides | `3` |
+| `-y`, `--padding-y <0-30>` | Vertical padding, in character cells, on top and bottom | `3` |
+| `-m`, `--max-size <50-400>` | Maximum size of the longest side of the reduced image | `100` |
+| `-z`, `--font-size <5-30>` | Font size used for rendering | `10` |
+| `-f`, `--font-family <FONT>` | Embedded font family | `fira-code-bold` |
+| `-g`, `--gradient <GRADIENT>` | Character gradient (`standard`, `jp2a`) | `standard` |
+| `-b`, `--brightness <BRIGHTNESS>` | Brightness function (`rec709`, `rec601`, `lightness`) | `lightness` |
+| `-c`, `--coloring <COLORING>` | Coloring mode (`black-and-white`, `image-based`) | `image-based` |
+| `-h`, `--help` | Print help | |
+| `-V`, `--version` | Print version | |
 
-### Size Parameters
+### Output behavior
 
-- When not using `-a/--auto`, specify output dimensions in characters:
-  ```bash
-  ascii-parser -i input.jpg -o output.txt 40 20
-  ```
-  (40 columns wide, 20 rows tall)
-> NOTE: the user must supply a width and height values that should be around the 1% and 25% of the input image original size, higher values are forbiden.
+- The text output defaults to `<input-stem>.txt` next to the input image.
+- The rendered image defaults to `<input-stem>_ascii.png` next to the input image.
+- `--skip-txt` only suppresses the default text file when `--text-file-path` is not set. An explicit text path takes precedence.
+- The rendered PNG is always generated.
+- If an output file already exists, the command fails unless `-o/--override` is passed.
 
+### Logging
+
+Logging uses the `log` crate through `simple_logger`.
+
+- Default level: `error`
+- `--debug`: `trace`, which also shows `info` and `warn` messages
+
+Use `--debug` to see pipeline details such as the detected file type, font metrics, image dimensions, reduction factor, output paths, and rendering information.
+
+## Fonts
+
+All fonts are embedded in the binary:
+
+| CLI value | Font |
+| --------- | ---- |
+| `cascadia-code-bold` | Cascadia Code NF Bold |
+| `cascadia-code-regular` | Cascadia Code NF Regular |
+| `fira-code-bold` | Fira Code Bold |
+| `fira-code-regular` | Fira Code Regular |
+| `hack-bold` | Hack Bold |
+| `hack-regular` | Hack Regular |
+| `jet-brains-mono-bold` | JetBrains Mono NL Bold |
+| `jet-brains-mono-regular` | JetBrains Mono NL Regular |
+
+## Character Gradients
+
+Two gradients are available:
+
+### `standard`
+
+```text
+"@&%#*+~=_-;:`'."
+```
+
+### `jp2a`
+
+```text
+"@$B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/()1{}[]?-_+~<>i!lI;:,^`'. "
+```
+
+The JP2A gradient includes a trailing space.
+
+## Brightness Functions
+
+- `rec709` — Rec. 709 luma
+- `rec601` — Rec. 601 luma
+- `lightness` — average of the maximum and minimum RGB channels
+
+## Coloring Modes
+
+- `black-and-white` — white glyphs on a black background
+- `image-based` — glyphs use the color of the corresponding pixel in the reduced image
+
+## Shell Completions
+
+```bash
+ascii-parser-cli --generate bash > ascii-parser-cli.bash
+```
+
+Supported shells: `bash`, `elvish`, `fish`, `power-shell`, `zsh`.
+
+## Project Structure
+
+```text
+crates/
+├── base/   # Core library: reduction, text conversion, and rendering
+└── cli/    # Command-line interface (ascii-parser-cli binary)
+```
+
+See [`crates/base/README.md`](crates/base/README.md) and [`crates/cli/README.md`](crates/cli/README.md) for crate-level details.
+
+## Development
+
+```bash
+cargo fmt --all
+cargo test --workspace
+cargo clippy --workspace --all-targets
+```
 
 ## Examples
 
-1. **Basic conversion**:
-
-   ```bash
-   ascii-parser -i photo.jpg -o art.txt # just for generating the .txt file
-   ```
-
-2. **With automatic sizing**:
-
-   ```bash
-   ascii-parser -i photo.jpg -o art.txt -a # automatic sizing and output a .txt file
-   ```
-
-3. **With PNG rendering**:
-
-   ```bash
-   ascii-parser -i photo.jpg -o art.txt 40 40 -r # will display a terminal menu for font & bgcolor selection, then will render a png image with de ascii art colorized of 40x40 chars.
-   ```
-   Menu for font and background color selection:
-   ![menu](menu-ascii-parser.png)
-
-4. **Verbose output**:
-   ```bash
-   ascii-parser -i photo.jpg -o art.txt -v # for more information of the parsing and rendering
-   ```
-
-## Fonts 
-
-The fonts currtently availible are the following, all comes embedded in the executable binary:
-
-- CascadiaCodeNF-Bold.ttf            
-- CascadiaCodeNF-Regular.ttf         
-- FiraCode-Bold.ttf                
-- FiraCode-Regular.ttf               
-- Hack-Bold.ttf                      
-- Hack-Regular.ttf                   
-- Inter-Bold.otf (on work soon)                    
-- Inter-Regular.otf (on work soon)          
-- JetBrainsMonoNL-Bold.ttf           
-- JetBrainsMonoNL-Regular.ttf  
-
-## Character Gradient
-
-This parser uses the following two character gradients for density representation in different cases:
-
-For rendering the PNG image:
-```c
-{'$', '&', '8', 'W', 'M', 'B', '@', '%','#', '*', '+', '=', '-', ':', '.', ' '}
-```
-
-For the .txt output file:
-```c
-{'@', 'M', 'W', 'B', 'R', 'N', 'Q', 'D', 'G', 'O', 'U', 'S', 'V', 'Z', ':', ' '}
-```
-
-## Building Dependencies
-
-- meson
-- C compiler (gcc/clang)
-- gkt4 (for embedded fonts)
-- ncurses
-
-## Extras
-
-This project uses the following modules from the [stb libraries](https://github.com/nothings/stb?tab=readme-ov-file):
-
-- stb_image.h
-- stb_image_write.h
-- stb_truetype.h
+<!-- Add example commands, output samples, and images here. -->
 
 ## License
 
-This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License — see the [LICENSE](LICENSE) file for details.
 
 [![CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](http://creativecommons.org/licenses/by-nc/4.0/)
