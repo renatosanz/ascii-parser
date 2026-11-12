@@ -17,8 +17,11 @@ impl ColoringFn {
             ColoringFn::ImageBased => img.get_pixel(x, y),
         }
     }
-    pub fn bg_color(&self, x: u32, y: u32, img: &DynamicImage) -> Rgba<u8> {
-        todo!("add bg color fn")
+    pub fn bg_color(&self, _x: u32, _y: u32, _img: &DynamicImage) -> Rgba<u8> {
+        match self {
+            ColoringFn::BlackAndWhite => Rgba([0, 0, 0, 255]),
+            ColoringFn::ImageBased => Rgba([0, 0, 0, 255]),
+        }
     }
 }
 
@@ -102,8 +105,8 @@ pub fn write_to_image(
 ) -> Result<(), image::ImageError> {
     // create image with fixed size and black background
     let mut rendered_img = RgbaImage::from_fn(
-        text_rows[0].len() as u32 * char_w + padding_x.mul(char_w),
-        text_rows.len() as u32 * char_h + padding_y.mul(char_h),
+        text_rows[0].len() as u32 * char_w + padding_x.mul(char_w).mul(2),
+        (text_rows.len() - 1) as u32 * char_h + padding_y.mul(char_h).mul(2),
         |_, _| Rgba([0, 0, 0, 255]),
     );
 
@@ -113,8 +116,8 @@ pub fn write_to_image(
         img_reducted,
         &font,
         &text_rows,
-        padding_x as f32, // X coordinate (padding from left)
-        padding_y as f32, // Y coordinate (padding from top)
+        padding_x.mul(char_w) as f32, // X coordinate (padding from left)
+        padding_y.mul(char_h) as f32, // Y coordinate (padding from top)
         scaled,
         size,
         coloring_fn,

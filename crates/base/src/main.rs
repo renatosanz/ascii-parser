@@ -280,8 +280,8 @@ mod test {
 
         let char_w = advance as u32;
         let char_h = line_height as u32;
-        let expected_width = text_rows[0].len() as u32 * char_w + padding_x * char_w;
-        let expected_height = text_rows.len() as u32 * char_h + padding_y * char_h;
+        let expected_width = text_rows[0].len() as u32 * char_w + padding_x * char_w * 2;
+        let expected_height = (text_rows.len() as u32 - 1) * char_h + padding_y * char_h * 2;
 
         let black_and_white_path = _guard.path("text_output_black_and_white.png");
         write_to_image(
