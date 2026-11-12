@@ -3,16 +3,19 @@ use std::path::{Path, PathBuf};
 use ab_glyph::{Font, PxScale};
 use image::GenericImageView;
 
-use crate::{
-    fonts::FontsMono,
-    parser::{BrightnessFn, ParsingGradient},
-    render::{ColoringFn, write_to_image},
-};
+use crate::render::write_to_image;
 
-pub mod fonts;
-pub mod parser;
-pub mod reductor;
-pub mod render;
+mod fonts;
+mod parser;
+mod reductor;
+mod render;
+
+#[cfg(test)]
+mod tests;
+
+pub use fonts::FontsMono;
+pub use parser::{BrightnessFn, ParsingGradient};
+pub use render::ColoringFn;
 
 pub fn process_image(
     original_image_path: &Path,

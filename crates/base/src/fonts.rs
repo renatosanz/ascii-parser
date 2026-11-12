@@ -14,7 +14,7 @@ pub enum FontsMono {
 }
 
 impl FontsMono {
-    pub fn bytes(self) -> &'static [u8] {
+    pub(crate) fn bytes(self) -> &'static [u8] {
         match self {
             FontsMono::CascadiaCodeBold => {
                 include_bytes!("../assets/fonts/CascadiaCodeNF-Bold.ttf")
@@ -35,12 +35,12 @@ impl FontsMono {
         }
     }
 
-    pub fn font_ref(self) -> Result<FontRef<'static>, ab_glyph::InvalidFont> {
+    pub(crate) fn font_ref(self) -> Result<FontRef<'static>, ab_glyph::InvalidFont> {
         log::info!("Loading font: {}", self.name());
         FontRef::try_from_slice(self.bytes())
     }
 
-    pub fn name(self) -> &'static str {
+    pub(crate) fn name(self) -> &'static str {
         match self {
             FontsMono::CascadiaCodeBold => "Cascadia Code NF Bold",
             FontsMono::CascadiaCodeRegular => "Cascadia Code NF Regular",

@@ -1,6 +1,10 @@
 use image::{DynamicImage, GenericImageView, imageops::FilterType};
 
-pub fn adaptative_reduction(img: &DynamicImage, max_dim: u32, font_ratio: f32) -> DynamicImage {
+pub(crate) fn adaptative_reduction(
+    img: &DynamicImage,
+    max_dim: u32,
+    font_ratio: f32,
+) -> DynamicImage {
     let (w, h) = img.dimensions();
     let bigger_side = w.max(h);
     log::info!(

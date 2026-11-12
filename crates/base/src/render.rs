@@ -11,13 +11,13 @@ pub enum ColoringFn {
 }
 
 impl ColoringFn {
-    pub fn fg_color(&self, x: u32, y: u32, img: &DynamicImage) -> Rgba<u8> {
+    pub(crate) fn fg_color(&self, x: u32, y: u32, img: &DynamicImage) -> Rgba<u8> {
         match self {
             ColoringFn::BlackAndWhite => Rgba([255, 255, 255, 255]),
             ColoringFn::ImageBased => img.get_pixel(x, y),
         }
     }
-    pub fn bg_color(&self, _x: u32, _y: u32, _img: &DynamicImage) -> Rgba<u8> {
+    pub(crate) fn bg_color(&self, _x: u32, _y: u32, _img: &DynamicImage) -> Rgba<u8> {
         match self {
             ColoringFn::BlackAndWhite => Rgba([0, 0, 0, 255]),
             ColoringFn::ImageBased => Rgba([0, 0, 0, 255]),
@@ -90,14 +90,17 @@ fn draw_text_lines(
 }
 
 /// Returns (advance, line_height, ratio = advance / line_height)
-pub fn advance_height_ratio(scaled: PxScaleFont<&FontRef<'_>>, sample: char) -> (f32, f32, f32) {
+pub(crate) fn advance_height_ratio(
+    scaled: PxScaleFont<&FontRef<'_>>,
+    sample: char,
+) -> (f32, f32, f32) {
     let advance = scaled.h_advance(scaled.glyph_id(sample));
     let line_height = scaled.height(); // = ascent + descent (scaled)
 
     (advance, line_height, advance / line_height)
 }
 
-pub fn write_to_image(
+pub(crate) fn write_to_image(
     img_reducted: &DynamicImage,
     path: &Path,
     text_rows: &[String],
@@ -131,9 +134,10 @@ pub fn write_to_image(
     );
     log::info!("Canvas size: {canvas_width}x{canvas_height}px");
 
-    // create image with fixed size and black background
-    let mut rendered_img =
-        RgbaImage::from_fn(canvas_width, canvas_height, |_, _| Rgba([0, 0, 0, 255]));
+    // create image with fixed size and background color
+    let mut rendered_img = RgbaImage::from_fn(canvas_width, canvas_height, |x, y| {
+        coloring_fn.bg_color(x, y, img_reducted)
+    });
 
     // draw the text onto the image
     draw_text_lines(

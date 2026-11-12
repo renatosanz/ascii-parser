@@ -142,11 +142,7 @@ fn main() -> AppResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use base::{
-        fonts::FontsMono,
-        parser::{BrightnessFn, ParsingGradient},
-        render::ColoringFn,
-    };
+    use base::{BrightnessFn, ColoringFn, FontsMono, ParsingGradient};
     use clap::error::ErrorKind;
     use cli::args::SupportedShell;
 

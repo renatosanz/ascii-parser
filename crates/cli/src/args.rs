@@ -1,8 +1,4 @@
-use base::{
-    fonts::FontsMono,
-    parser::{BrightnessFn, ParsingGradient},
-    render::ColoringFn,
-};
+use base::{BrightnessFn, ColoringFn, FontsMono, ParsingGradient};
 use clap::{ArgAction, Parser};
 use clap_complete::Shell;
 

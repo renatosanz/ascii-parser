@@ -37,7 +37,7 @@ pub enum BrightnessFn {
 }
 
 impl BrightnessFn {
-    pub fn apply(&self, p: Rgba<u8>) -> f32 {
+    pub(crate) fn apply(&self, p: Rgba<u8>) -> f32 {
         match self {
             BrightnessFn::Lightness => {
                 let max = p[0].max(p[1]).max(p[2]) as f32;
@@ -56,7 +56,7 @@ impl BrightnessFn {
     }
 }
 
-pub fn export_to_text_file(
+pub(crate) fn export_to_text_file(
     img: &DynamicImage,
     filepath: Option<PathBuf>,
     brightness_fn: BrightnessFn,
