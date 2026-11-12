@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/base",
+    "crates/cli",
+]
+
+[workspace.package]
+license = "Creative Commons 4.0"
+authors = ["Renato Sanchez <renato.sanchez3103@gmail.com>"]

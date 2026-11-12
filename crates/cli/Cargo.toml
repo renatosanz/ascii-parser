@@ -1,0 +1,18 @@
+[package]
+name = "cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+base = { path = "../base", features = ["clap"] }
+clap_complete = "4"
+infer = "0.16"
+thiserror = "2.0.17"
+simple_logger = "5.2.0"
+log = "0.4.35"
+
+
+[[bin]]
+name = "ascii-parser-cli"
+path = "src/main.rs"
