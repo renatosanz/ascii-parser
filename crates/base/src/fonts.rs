@@ -62,7 +62,7 @@ impl FontsMono {
             FontsMono::HackRegular => "Hack Regular",
             FontsMono::JetBrainsMonoBold => "JetBrains Mono NL Bold",
             FontsMono::JetBrainsMonoRegular => "JetBrains Mono NL Regular",
-            FontsMono::MicroKnight => "Topaz a1200 v1.0",
+            FontsMono::MicroKnight => "MicroKnight v1.0",
             FontsMono::MicroKnightPlus => "MicroKnight Plus v1.0",
             FontsMono::Topaz => "Topaz a1200 v1.0"
         }

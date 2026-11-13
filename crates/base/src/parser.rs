@@ -8,7 +8,7 @@ use image::{DynamicImage, GenericImageView, Rgba};
 
 const STANDARD_GRADIENT: &str = "@&%#*+~=_-;:`'.";
 const JP2A_GRADIENT: &str = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
-const CLASIC_GRADIENT: &str = "@#W$9876543210?!abc;:+=-,._";
+const CLASSIC_GRADIENT: &str = "@#W$9876543210?!abc;:+=-,._";
 const COMPACT_GRADIENT: &str = "@%#*+=-:.";
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -17,7 +17,7 @@ pub enum ParsingGradient {
     Standard,
     Compact,
     JP2A,
-    Clasic,
+    Classic,
 }
 
 impl Into<&'static str> for ParsingGradient {
@@ -25,7 +25,7 @@ impl Into<&'static str> for ParsingGradient {
         match self {
             ParsingGradient::JP2A => JP2A_GRADIENT,
             ParsingGradient::Standard => STANDARD_GRADIENT,
-            ParsingGradient::Clasic => CLASIC_GRADIENT,
+            ParsingGradient::Classic => CLASSIC_GRADIENT,
             ParsingGradient::Compact => COMPACT_GRADIENT
         }
     }
