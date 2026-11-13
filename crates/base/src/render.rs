@@ -3,24 +3,35 @@ use std::{ops::Mul, path::Path};
 use ab_glyph::{Font, FontRef, Glyph, PxScaleFont, ScaleFont, point};
 use image::{DynamicImage, GenericImageView, Rgba, RgbaImage};
 
+use crate::BrightnessFn;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "clap", derive(clap::ValueEnum))]
 pub enum ColoringFn {
     BlackAndWhite,
+    WhiteAndBlack,
     ImageBased,
+    GrayScale,
 }
 
 impl ColoringFn {
     pub(crate) fn fg_color(&self, x: u32, y: u32, img: &DynamicImage) -> Rgba<u8> {
         match self {
             ColoringFn::BlackAndWhite => Rgba([255, 255, 255, 255]),
+            ColoringFn::WhiteAndBlack => Rgba([0, 0, 0, 255]),
             ColoringFn::ImageBased => img.get_pixel(x, y),
+            ColoringFn::GrayScale => {
+                let light_value = (BrightnessFn::Rec601.apply(img.get_pixel(x, y)) * 255.) as u8;
+                Rgba([light_value, light_value, light_value, 255])
+            }
         }
     }
-    pub(crate) fn bg_color(&self, _x: u32, _y: u32, _img: &DynamicImage) -> Rgba<u8> {
+    pub(crate) fn bg_color(&self) -> Rgba<u8> {
         match self {
             ColoringFn::BlackAndWhite => Rgba([0, 0, 0, 255]),
+            ColoringFn::WhiteAndBlack => Rgba([255, 255, 255, 255]),
             ColoringFn::ImageBased => Rgba([0, 0, 0, 255]),
+            ColoringFn::GrayScale => Rgba([0, 0, 0, 255]),
         }
     }
 }
@@ -135,8 +146,8 @@ pub(crate) fn write_to_image(
     log::info!("Canvas size: {canvas_width}x{canvas_height}px");
 
     // create image with fixed size and background color
-    let mut rendered_img = RgbaImage::from_fn(canvas_width, canvas_height, |x, y| {
-        coloring_fn.bg_color(x, y, img_reducted)
+    let mut rendered_img = RgbaImage::from_fn(canvas_width, canvas_height, |_x, _y| {
+        coloring_fn.bg_color()
     });
 
     // draw the text onto the image

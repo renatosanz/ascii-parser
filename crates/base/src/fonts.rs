@@ -11,6 +11,9 @@ pub enum FontsMono {
     HackRegular,
     JetBrainsMonoBold,
     JetBrainsMonoRegular,
+    MicroKnight,
+    MicroKnightPlus,
+    Topaz
 }
 
 impl FontsMono {
@@ -32,6 +35,15 @@ impl FontsMono {
             FontsMono::JetBrainsMonoRegular => {
                 include_bytes!("../assets/fonts/JetBrainsMonoNL-Regular.ttf")
             }
+            FontsMono::MicroKnight =>{
+                include_bytes!("../assets/fonts/MicroKnight_v1.0.ttf")
+            }
+            FontsMono::MicroKnightPlus =>{
+                include_bytes!("../assets/fonts/MicroKnightPlus_v1.0.ttf")
+            }
+            FontsMono::Topaz => {
+                include_bytes!("../assets/fonts/Topaz_a1200_v1.0.ttf")
+            }
         }
     }
 
@@ -50,6 +62,9 @@ impl FontsMono {
             FontsMono::HackRegular => "Hack Regular",
             FontsMono::JetBrainsMonoBold => "JetBrains Mono NL Bold",
             FontsMono::JetBrainsMonoRegular => "JetBrains Mono NL Regular",
+            FontsMono::MicroKnight => "Topaz a1200 v1.0",
+            FontsMono::MicroKnightPlus => "MicroKnight Plus v1.0",
+            FontsMono::Topaz => "Topaz a1200 v1.0"
         }
     }
 }
