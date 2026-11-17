@@ -4,9 +4,11 @@ use gpui::*;
 
 use crate::{
     colorscheme::ColorScheme,
-    components::{Button, Dropdown, Input, Label, Slider},
+    components::{Button, Dropdown, IconButton, Label, Slider},
     state::State,
 };
+
+const OPEN_FOLDER: &[u8] = include_bytes!("../../assets/svg/open_folder.svg");
 
 pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
     let ui_disabled = state.config.image_path.is_none();
@@ -47,59 +49,43 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
         .flex_row_reverse()
         .size_full()
         .min_h_0()
-        .gap(px(12.))
-        .child(
-            div()
-                .id("image_views_section")
-                .flex()
-                .flex_col()
-                .flex_1()
-                .min_w_0()
-                .min_h_0()
-                .overflow_y_scroll()
-                .child(
-                    div()
-                        .id("original")
-                        .flex_grow(5.)
-                        .border_2()
-                        .border_color(rgb(ColorScheme::BorderSubtle.into()))
-                        .rounded_xl(),
-                )
-                .child(
-                    div()
-                        .id("state_icon")
-                        .m_auto()
-                        .flex_grow(1.)
-                        .items_center()
-                        .content_center()
-                        .child(
-                            div()
-                                .h_12()
-                                .w_12()
-                                .border_2()
-                                .border_color(rgb(ColorScheme::BorderSubtle.into()))
-                                .rounded_xl(),
-                        ),
-                )
-                .child(
-                    div()
-                        .id("rendered")
-                        .flex_grow(5.)
-                        .border_2()
-                        .border_color(rgb(ColorScheme::BorderSubtle.into()))
-                        .rounded_xl(),
-                ),
-        )
+        .gap_4()
+        .when(state.live_render, |this| {
+            this.child(
+                div()
+                    .id("image_views_section")
+                    .flex()
+                    .flex_col()
+                    .flex_1()
+                    .min_w_0()
+                    .min_h_0()
+                    .gap_3()
+                    .overflow_y_scroll()
+                    .child(image_box(
+                        "original",
+                        "Original",
+                        state.config.image_path.clone(),
+                    ))
+                    .child(image_box("rendered", "Rendered", state.preview_png.clone())),
+            )
+        })
         .child(
             div()
                 .id("config_section")
                 .flex()
                 .flex_col()
-                .w(px(240.))
                 .flex_shrink_0()
-                .gap(px(12.))
+                .when(state.live_render, |this| this.w(px(240.)))
+                .when(!state.live_render, |this| this.flex_1())
+                .gap_3()
                 .h_full()
                 .min_h_0()
+                .child(
+                    div()
+                        .text_base()
+                        .font_weight(FontWeight::MEDIUM)
+                        .child("Settings"),
+                )
                 .child(
                     div()
                         .id("controls")
@@ -111,13 +97,14 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
                         .gap(px(12.))
                         .child(
                             div()
-                                .p_4()
-                                .border_2()
+                                .p_3()
+                                .border_1()
                                 .flex()
                                 .flex_col()
                                 .flex_shrink_0()
                                 .border_color(rgb(ColorScheme::BorderSubtle.into()))
-                                .rounded_xl()
+                                .bg(rgb(ColorScheme::BgSurface.into()))
+                                .rounded_lg()
                                 .gap_3()
                                 .child(field(
                                     format!("Max side size: {max_size:.0}"),
@@ -128,6 +115,7 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
                                             move |value, _, cx| {
                                                 entity.update(cx, |state, cx| {
                                                     state.config.max_size = value;
+                                                    state.request_live_preview(cx);
                                                     cx.notify();
                                                 });
                                             }
@@ -142,6 +130,7 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
                                             move |value, _, cx| {
                                                 entity.update(cx, |state, cx| {
                                                     state.config.font_size = value;
+                                                    state.request_live_preview(cx);
                                                     cx.notify();
                                                 });
                                             }
@@ -156,6 +145,7 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
                                             move |value, _, cx| {
                                                 entity.update(cx, |state, cx| {
                                                     state.config.padding_x = value;
+                                                    state.request_live_preview(cx);
                                                     cx.notify();
                                                 });
                                             }
@@ -170,6 +160,7 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
                                             move |value, _, cx| {
                                                 entity.update(cx, |state, cx| {
                                                     state.config.padding_y = value;
+                                                    state.request_live_preview(cx);
                                                     cx.notify();
                                                 });
                                             }
@@ -191,6 +182,7 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
                                                 };
                                                 entity.update(cx, |state, cx| {
                                                     state.config.font = font;
+                                                    state.request_live_preview(cx);
                                                     cx.notify();
                                                 });
                                             }
@@ -216,6 +208,7 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
                                             };
                                             entity.update(cx, |state, cx| {
                                                 state.config.gradient = gradient;
+                                                state.request_live_preview(cx);
                                                 cx.notify();
                                             });
                                         }
@@ -241,6 +234,7 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
                                             };
                                             entity.update(cx, |state, cx| {
                                                 state.config.coloring = coloring;
+                                                state.request_live_preview(cx);
                                                 cx.notify();
                                             });
                                         }
@@ -266,6 +260,7 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
                                             };
                                             entity.update(cx, |state, cx| {
                                                 state.config.brightness = brightness;
+                                                state.request_live_preview(cx);
                                                 cx.notify();
                                             });
                                         }
@@ -273,50 +268,58 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
                                 ))
                                 .child(field(
                                     "Output PNG",
-                                    Input::new("output-png", output_png, state.png_focus.clone())
-                                        .disabled(ui_disabled)
-                                        .on_change({
-                                            let entity = entity.clone();
-                                            move |value, _, cx| {
-                                                entity.update(cx, |state, cx| {
-                                                    state.config.output_png =
-                                                        value.to_string().into();
-                                                    cx.notify();
-                                                });
-                                            }
-                                        }),
+                                    div()
+                                        .flex()
+                                        .gap_2()
+                                        .w_full()
+                                        .child(display_path(&output_png, "Select a folder"))
+                                        .child(
+                                            IconButton::new("output-png-dir", OPEN_FOLDER)
+                                                .disabled(ui_disabled)
+                                                .on_click(
+                                                    cx.listener(
+                                                        State::handle_select_output_png_dir,
+                                                    ),
+                                                ),
+                                        ),
                                 ))
                                 .child(field(
-                                    "Output TXT (empty disables)",
-                                    Input::new("output-txt", output_txt, state.txt_focus.clone())
-                                        .disabled(ui_disabled)
-                                        .on_change({
-                                            let entity = entity.clone();
-                                            move |value, _, cx| {
-                                                entity.update(cx, |state, cx| {
-                                                    state.config.output_txt =
-                                                        value.to_string().into();
-                                                    cx.notify();
-                                                });
-                                            }
-                                        }),
+                                    "Output TXT",
+                                    div()
+                                        .flex()
+                                        .gap_2()
+                                        .w_full()
+                                        .child(display_path(&output_txt, "Disabled"))
+                                        .child(
+                                            IconButton::new("output-txt-dir", OPEN_FOLDER)
+                                                .disabled(ui_disabled)
+                                                .on_click(
+                                                    cx.listener(
+                                                        State::handle_select_output_txt_dir,
+                                                    ),
+                                                ),
+                                        ),
                                 )),
                         ),
                 )
                 .child(
                     div()
-                        .p_4()
-                        .border_2()
+                        .p_3()
+                        .border_1()
                         .flex()
                         .flex_col()
                         .flex_shrink_0()
                         .gap_2()
                         .border_color(rgb(ColorScheme::BorderSubtle.into()))
-                        .rounded_xl()
+                        .bg(rgb(ColorScheme::BgSurface.into()))
+                        .rounded_lg()
                         .child(
-                            Button::new("start", "Start".into())
-                                .on_click(cx.listener(State::handle_start))
-                                .disabled(ui_disabled),
+                            Button::new(
+                                "start",
+                                if state.live_render { "Save" } else { "Start" }.into(),
+                            )
+                            .on_click(cx.listener(State::handle_start))
+                            .disabled(ui_disabled),
                         )
                         .when_some(status, |this, (message, is_error)| {
                             let color = if is_error {
@@ -330,6 +333,58 @@ pub fn render(state: &State, cx: &mut Context<State>) -> impl IntoElement {
         )
 }
 
+fn display_path(path: &str, empty_label: &'static str) -> Div {
+    let empty = path.is_empty();
+    div()
+        .flex()
+        .items_center()
+        .h(px(34.))
+        .flex_1()
+        .min_w_0()
+        .text_sm()
+        .when(empty, |this| {
+            this.text_color(rgb(ColorScheme::TextMuted.into()))
+        })
+        .when(!empty, |this| {
+            this.text_color(rgb(ColorScheme::TextSecondary.into()))
+        })
+        .child(
+            div()
+                .w_full()
+                .overflow_hidden()
+                .whitespace_nowrap()
+                .text_ellipsis_middle()
+                .child(if empty {
+                    empty_label.to_string()
+                } else {
+                    short_path(path)
+                }),
+        )
+}
+
+pub(crate) fn short_path(path: &str) -> String {
+    collapse_home(
+        path,
+        std::env::var_os("HOME")
+            .map(std::path::PathBuf::from)
+            .as_deref(),
+    )
+}
+
+fn collapse_home(path: &str, home: Option<&std::path::Path>) -> String {
+    let Some(home) = home.and_then(|home| home.to_str()) else {
+        return path.to_string();
+    };
+    let home = home.trim_end_matches('/');
+    if path == home {
+        "~".to_string()
+    } else if let Some(rest) = path.strip_prefix(home).filter(|rest| rest.starts_with('/')) {
+        format!("~{rest}")
+    } else {
+        path.to_string()
+    }
+}
+
 fn field(label: impl Into<SharedString>, control: impl IntoElement) -> Div {
     div()
         .flex()
@@ -337,4 +392,66 @@ fn field(label: impl Into<SharedString>, control: impl IntoElement) -> Div {
         .gap_1()
         .child(Label::new(label))
         .child(control)
+}
+
+fn image_box(
+    id: &'static str,
+    caption: &'static str,
+    source: Option<std::path::PathBuf>,
+) -> impl IntoElement {
+    div()
+        .id(id)
+        .flex_grow(5.)
+        .min_h(px(120.))
+        .flex()
+        .flex_col()
+        .overflow_hidden()
+        .border_1()
+        .border_color(rgb(ColorScheme::BorderSubtle.into()))
+        .bg(rgb(ColorScheme::BgSurface.into()))
+        .rounded_lg()
+        .child(
+            div()
+                .px_3()
+                .py_2()
+                .text_xs()
+                .font_weight(FontWeight::MEDIUM)
+                .text_color(rgb(ColorScheme::TextSecondary.into()))
+                .child(caption),
+        )
+        .child(
+            div()
+                .flex_1()
+                .min_h_0()
+                .flex()
+                .items_center()
+                .content_center()
+                .overflow_hidden()
+                .px_3()
+                .pb_3()
+                .when_some(source, |this, path| {
+                    this.child(img(path).size_full().object_fit(ObjectFit::Contain))
+                }),
+        )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::collapse_home;
+    use std::path::Path;
+
+    #[test]
+    fn collapse_home_to_tilde() {
+        let home = Path::new("/home/renato");
+        assert_eq!(
+            collapse_home("/home/renato/img/out.txt", Some(home)),
+            "~/img/out.txt"
+        );
+        assert_eq!(collapse_home("/home/renato", Some(home)), "~");
+        assert_eq!(collapse_home("/tmp/out.txt", Some(home)), "/tmp/out.txt");
+        assert_eq!(
+            collapse_home("/home/renato2/out.txt", Some(home)),
+            "/home/renato2/out.txt"
+        );
+    }
 }
