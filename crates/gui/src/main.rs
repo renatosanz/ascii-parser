@@ -8,8 +8,13 @@ mod state;
 mod views;
 
 const START_WINDOW_SIZE: Size<Pixels> = Size {
-    width: px(500.),
-    height: px(500.),
+    width: px(620.),
+    height: px(600.),
+};
+
+const MIN_WINDOW_SIZE: Size<Pixels> = Size {
+    width: px(540.),
+    height: px(480.),
 };
 
 fn main() {
@@ -35,7 +40,8 @@ fn main() {
                 START_WINDOW_SIZE,
                 cx,
             ))),
-            is_resizable: false,
+            is_resizable: true,
+            window_min_size: Some(MIN_WINDOW_SIZE),
             app_id: Some("ascii-parser".into()),
             ..WindowOptions::default()
         };
