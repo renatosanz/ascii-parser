@@ -17,6 +17,20 @@ pub enum FontsMono {
 }
 
 impl FontsMono {
+    pub const ALL: [FontsMono; 11] = [
+        FontsMono::CascadiaCodeBold,
+        FontsMono::CascadiaCodeRegular,
+        FontsMono::FiraCodeBold,
+        FontsMono::FiraCodeRegular,
+        FontsMono::HackBold,
+        FontsMono::HackRegular,
+        FontsMono::JetBrainsMonoBold,
+        FontsMono::JetBrainsMonoRegular,
+        FontsMono::MicroKnight,
+        FontsMono::MicroKnightPlus,
+        FontsMono::Topaz,
+    ];
+
     pub(crate) fn bytes(self) -> &'static [u8] {
         match self {
             FontsMono::CascadiaCodeBold => {
@@ -52,7 +66,7 @@ impl FontsMono {
         FontRef::try_from_slice(self.bytes())
     }
 
-    pub(crate) fn name(self) -> &'static str {
+    pub fn name(self) -> &'static str {
         match self {
             FontsMono::CascadiaCodeBold => "Cascadia Code NF Bold",
             FontsMono::CascadiaCodeRegular => "Cascadia Code NF Regular",

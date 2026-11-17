@@ -15,6 +15,13 @@ pub enum ColoringFn {
 }
 
 impl ColoringFn {
+    pub const ALL: [ColoringFn; 4] = [
+        ColoringFn::BlackAndWhite,
+        ColoringFn::WhiteAndBlack,
+        ColoringFn::ImageBased,
+        ColoringFn::GrayScale,
+    ];
+
     pub(crate) fn fg_color(&self, x: u32, y: u32, img: &DynamicImage) -> Rgba<u8> {
         match self {
             ColoringFn::BlackAndWhite => Rgba([255, 255, 255, 255]),

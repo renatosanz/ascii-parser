@@ -1,0 +1,22 @@
+[package]
+name = "gui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+base = { path = "../base" }
+gpui = { git = "https://github.com/zed-industries/zed" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", features = [
+    "font-kit",
+    "wayland",
+    "x11",
+] }
+gpui_macros = { git = "https://github.com/zed-industries/zed" }
+simple_logger = "5.2.0"
+log = "0.4.35"
+open = "3"
+infer = "0.16"
+
+[[bin]]
+name = "ascii-parser"
+path = "src/main.rs"

@@ -20,6 +20,15 @@ pub enum ParsingGradient {
     Classic,
 }
 
+impl ParsingGradient {
+    pub const ALL: [ParsingGradient; 4] = [
+        ParsingGradient::Standard,
+        ParsingGradient::Compact,
+        ParsingGradient::JP2A,
+        ParsingGradient::Classic,
+    ];
+}
+
 impl Into<&'static str> for ParsingGradient {
     fn into(self) -> &'static str {
         match self {
@@ -43,6 +52,12 @@ pub enum BrightnessFn {
 }
 
 impl BrightnessFn {
+    pub const ALL: [BrightnessFn; 3] = [
+        BrightnessFn::Rec709,
+        BrightnessFn::Rec601,
+        BrightnessFn::Lightness,
+    ];
+
     pub(crate) fn apply(&self, p: Rgba<u8>) -> f32 {
         match self {
             BrightnessFn::Lightness => {
