@@ -307,12 +307,31 @@ impl State {
                 return;
             };
             let path = dir.join(file_name).to_string_lossy().into_owned();
+            let probe_path = PathBuf::from(&path);
+            let writable = cx
+                .background_executor()
+                .spawn(async move { output_is_writable(&probe_path) })
+                .await;
 
             this.update_in(cx, |state, _window, cx| {
-                if png {
-                    state.config.output_png = Some(path);
-                } else {
-                    state.config.output_txt = Some(path);
+                match writable {
+                    Ok(()) => {
+                        if png {
+                            state.config.output_png = Some(path);
+                        } else {
+                            state.config.output_txt = Some(path);
+                        }
+                        state.config.status = None;
+                    }
+                    Err(err) => {
+                        state.config.status = Some((
+                            format!(
+                                "Cannot write {}: {err}",
+                                views::processing::short_path(&path)
+                            ),
+                            true,
+                        ));
+                    }
                 }
                 cx.notify();
             })
@@ -443,3 +462,69 @@ impl Render for State {
     }
 }
 
+fn output_is_writable(path: &Path) -> Result<(), std::io::Error> {
+    if path.exists() {
+        return std::fs::OpenOptions::new()
+            .write(true)
+            .open(path)
+            .map(|_| ());
+    }
+
+    let dir = path.parent().unwrap_or(Path::new("."));
+    let probe = dir.join(format!(".ascii-parser-write-test-{}", std::process::id()));
+    match std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&probe)
+    {
+        Ok(_) => {
+            let _ = std::fs::remove_file(&probe);
+            Ok(())
+        }
+        // A leftover probe means we can create files here.
+        Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => Ok(()),
+        Err(err) => Err(err),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::output_is_writable;
+    use std::path::Path;
+
+    #[test]
+    fn probe_reports_writable_and_missing_parent() {
+        let target = std::env::temp_dir().join(format!(
+            "ascii-parser-probe-test-{}.png",
+            std::process::id()
+        ));
+        assert!(output_is_writable(&target).is_ok());
+        assert!(
+            output_is_writable(Path::new("/ascii-parser-missing-dir-for-test/output.png")).is_err()
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn probe_rejects_read_only_folder() {
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = std::env::temp_dir().join(format!("ascii-parser-ro-test-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o555)).unwrap();
+
+        // Root ignores permission bits, so only assert when the mode is enforced.
+        let can_bypass = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(dir.join(".root-check"))
+            .is_ok();
+        if !can_bypass {
+            assert!(output_is_writable(&dir.join("out.png")).is_err());
+        }
+
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        let _ = fs::remove_dir_all(&dir);
+    }
+}
