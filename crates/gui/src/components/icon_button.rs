@@ -8,6 +8,7 @@ pub struct IconButton {
     icon: &'static [u8],
     on_click: Option<Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
     disabled: bool,
+    compact: bool,
 }
 
 impl IconButton {
@@ -17,7 +18,13 @@ impl IconButton {
             icon,
             on_click: None,
             disabled: false,
+            compact: false,
         }
+    }
+
+    pub fn compact(mut self) -> Self {
+        self.compact = true;
+        self
     }
 
     pub fn on_click(
@@ -37,6 +44,8 @@ impl IconButton {
 impl RenderOnce for IconButton {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let disabled = self.disabled;
+        let size = if self.compact { px(24.) } else { px(34.) };
+        let icon_size = if self.compact { px(13.) } else { px(16.) };
         let background_color = if disabled {
             ColorScheme::BgSurfaceHover
         } else {
@@ -53,7 +62,7 @@ impl RenderOnce for IconButton {
             .flex()
             .items_center()
             .justify_center()
-            .size(px(34.))
+            .size(size)
             .rounded_md()
             .border_1()
             .border_color(rgb(ColorScheme::BorderSubtle.into()))
@@ -70,7 +79,7 @@ impl RenderOnce for IconButton {
             })
             .child(
                 svg()
-                    .size(px(16.))
+                    .size(icon_size)
                     .data(self.icon)
                     .text_color(rgb(icon_color.into())),
             )

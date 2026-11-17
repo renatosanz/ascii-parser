@@ -79,11 +79,41 @@ impl Default for ProcessingConfig {
     }
 }
 
+#[derive(Clone, Copy)]
+pub struct ImageView {
+    pub zoom: f32,
+    pub pan: Point<Pixels>,
+}
+
+impl Default for ImageView {
+    fn default() -> Self {
+        ImageView {
+            zoom: 1.,
+            pan: point(px(0.), px(0.)),
+        }
+    }
+}
+
+impl ImageView {
+    pub fn clamped_pan(&self, viewport: Size<Pixels>) -> Point<Pixels> {
+        let max_x = f32::from(viewport.width) * (self.zoom - 1.) / 2.;
+        let max_y = f32::from(viewport.height) * (self.zoom - 1.) / 2.;
+        point(
+            px(f32::from(self.pan.x).clamp(-max_x, max_x)),
+            px(f32::from(self.pan.y).clamp(-max_y, max_y)),
+        )
+    }
+}
+
+const MAX_ZOOM: f32 = 8.;
+
 pub struct State {
     pub config: ProcessingConfig,
     pub error: Option<String>,
     pub live_render: bool,
     pub preview_png: Option<PathBuf>,
+    pub original_view: ImageView,
+    pub rendered_view: ImageView,
     preview_generation: u64,
 }
 
@@ -94,8 +124,37 @@ impl State {
             error: None,
             live_render: false,
             preview_png: None,
+            original_view: ImageView::default(),
+            rendered_view: ImageView::default(),
             preview_generation: 0,
         }
+    }
+
+    fn image_view_mut(&mut self, original: bool) -> &mut ImageView {
+        if original {
+            &mut self.original_view
+        } else {
+            &mut self.rendered_view
+        }
+    }
+
+    pub fn zoom_image(&mut self, original: bool, factor: f32, viewport: Size<Pixels>) {
+        let view = self.image_view_mut(original);
+        view.zoom = (view.zoom * factor).clamp(1., MAX_ZOOM);
+        if view.zoom == 1. {
+            view.pan = point(px(0.), px(0.));
+        }
+        view.pan = view.clamped_pan(viewport);
+    }
+
+    pub fn pan_image(&mut self, original: bool, delta: Point<Pixels>, viewport: Size<Pixels>) {
+        let view = self.image_view_mut(original);
+        view.pan = point(view.pan.x + delta.x, view.pan.y + delta.y);
+        view.pan = view.clamped_pan(viewport);
+    }
+
+    pub fn reset_image(&mut self, original: bool) {
+        *self.image_view_mut(original) = ImageView::default();
     }
 
     // ------------- HANDLERS ------------------
@@ -237,6 +296,8 @@ impl State {
                     }
                     state.preview_generation += 1;
                     state.request_live_preview(cx);
+                    state.reset_image(true);
+                    state.reset_image(false);
                 } else {
                     state.error =
                         Some(format!("{} is not a supported image file.", path.display()));
@@ -405,7 +466,7 @@ impl Drop for State {
 }
 
 impl Render for State {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .font_family("Inter")
             .bg(rgb(ColorScheme::BgApp.into()))
@@ -457,7 +518,7 @@ impl Render for State {
                     .flex_1()
                     .min_h_0()
                     .p_4()
-                    .child(views::processing::render(self, cx)),
+                    .child(views::processing::render(self, window, cx)),
             )
     }
 }
@@ -489,8 +550,22 @@ fn output_is_writable(path: &Path) -> Result<(), std::io::Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::output_is_writable;
+    use super::{ImageView, output_is_writable};
+    use gpui::{point, px, size};
     use std::path::Path;
+
+    #[test]
+    fn image_view_clamps_pan_to_zoom() {
+        let viewport = size(px(100.), px(80.));
+        let view = ImageView {
+            zoom: 2.,
+            pan: point(px(999.), px(-999.)),
+        };
+        assert_eq!(view.clamped_pan(viewport), point(px(50.), px(-40.)));
+
+        let unzoomed = ImageView::default();
+        assert_eq!(unzoomed.clamped_pan(viewport), point(px(0.), px(0.)));
+    }
 
     #[test]
     fn probe_reports_writable_and_missing_parent() {
