@@ -83,6 +83,8 @@ impl Default for ProcessingConfig {
 pub struct ImageView {
     pub zoom: f32,
     pub pan: Point<Pixels>,
+    /// Mouse position and pan at the start of a drag.
+    drag: Option<(Point<Pixels>, Point<Pixels>)>,
 }
 
 impl Default for ImageView {
@@ -90,6 +92,7 @@ impl Default for ImageView {
         ImageView {
             zoom: 1.,
             pan: point(px(0.), px(0.)),
+            drag: None,
         }
     }
 }
@@ -151,6 +154,29 @@ impl State {
         let view = self.image_view_mut(original);
         view.pan = point(view.pan.x + delta.x, view.pan.y + delta.y);
         view.pan = view.clamped_pan(viewport);
+    }
+
+    pub fn begin_drag(&mut self, original: bool, mouse: Point<Pixels>) {
+        let view = self.image_view_mut(original);
+        if view.zoom > 1. {
+            view.drag = Some((mouse, view.pan));
+        }
+    }
+
+    pub fn drag_image(&mut self, original: bool, mouse: Point<Pixels>, viewport: Size<Pixels>) {
+        let view = self.image_view_mut(original);
+        let Some((start_mouse, start_pan)) = view.drag else {
+            return;
+        };
+        view.pan = point(
+            start_pan.x + mouse.x - start_mouse.x,
+            start_pan.y + mouse.y - start_mouse.y,
+        );
+        view.pan = view.clamped_pan(viewport);
+    }
+
+    pub fn end_drag(&mut self, original: bool) {
+        self.image_view_mut(original).drag = None;
     }
 
     pub fn reset_image(&mut self, original: bool) {
@@ -550,7 +576,7 @@ fn output_is_writable(path: &Path) -> Result<(), std::io::Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::{ImageView, output_is_writable};
+    use super::{ImageView, ProcessingConfig, State, output_is_writable};
     use gpui::{point, px, size};
     use std::path::Path;
 
@@ -560,11 +586,40 @@ mod tests {
         let view = ImageView {
             zoom: 2.,
             pan: point(px(999.), px(-999.)),
+            ..ImageView::default()
         };
         assert_eq!(view.clamped_pan(viewport), point(px(50.), px(-40.)));
 
         let unzoomed = ImageView::default();
         assert_eq!(unzoomed.clamped_pan(viewport), point(px(0.), px(0.)));
+    }
+
+    #[test]
+    fn drag_pans_by_mouse_delta_and_clamps() {
+        let viewport = size(px(100.), px(80.));
+        let mut state = State {
+            config: ProcessingConfig::default(),
+            error: None,
+            live_render: false,
+            preview_png: None,
+            original_view: ImageView {
+                zoom: 2.,
+                ..ImageView::default()
+            },
+            rendered_view: ImageView::default(),
+            preview_generation: 0,
+        };
+
+        state.begin_drag(true, point(px(10.), px(10.)));
+        state.drag_image(true, point(px(30.), px(20.)), viewport);
+        assert_eq!(state.original_view.pan, point(px(20.), px(10.)));
+
+        state.drag_image(true, point(px(999.), px(-999.)), viewport);
+        assert_eq!(state.original_view.pan, point(px(50.), px(-40.)));
+
+        state.end_drag(true);
+        state.drag_image(true, point(px(0.), px(0.)), viewport);
+        assert_eq!(state.original_view.pan, point(px(50.), px(-40.)));
     }
 
     #[test]
