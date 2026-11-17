@@ -98,9 +98,13 @@ impl Default for ImageView {
 }
 
 impl ImageView {
-    pub fn clamped_pan(&self, viewport: Size<Pixels>) -> Point<Pixels> {
-        let max_x = f32::from(viewport.width) * (self.zoom - 1.) / 2.;
-        let max_y = f32::from(viewport.height) * (self.zoom - 1.) / 2.;
+    /// Clamps the pan so the zoomed image content stays inside the viewport.
+    /// `fitted` is the image's displayed size at zoom 1.
+    pub fn clamped_pan(&self, viewport: Size<Pixels>, fitted: Size<Pixels>) -> Point<Pixels> {
+        let max_x =
+            ((f32::from(fitted.width) * self.zoom - f32::from(viewport.width)) / 2.).max(0.);
+        let max_y =
+            ((f32::from(fitted.height) * self.zoom - f32::from(viewport.height)) / 2.).max(0.);
         point(
             px(f32::from(self.pan.x).clamp(-max_x, max_x)),
             px(f32::from(self.pan.y).clamp(-max_y, max_y)),
@@ -141,19 +145,31 @@ impl State {
         }
     }
 
-    pub fn zoom_image(&mut self, original: bool, factor: f32, viewport: Size<Pixels>) {
+    pub fn zoom_image(
+        &mut self,
+        original: bool,
+        factor: f32,
+        viewport: Size<Pixels>,
+        fitted: Size<Pixels>,
+    ) {
         let view = self.image_view_mut(original);
         view.zoom = (view.zoom * factor).clamp(1., MAX_ZOOM);
         if view.zoom == 1. {
             view.pan = point(px(0.), px(0.));
         }
-        view.pan = view.clamped_pan(viewport);
+        view.pan = view.clamped_pan(viewport, fitted);
     }
 
-    pub fn pan_image(&mut self, original: bool, delta: Point<Pixels>, viewport: Size<Pixels>) {
+    pub fn pan_image(
+        &mut self,
+        original: bool,
+        delta: Point<Pixels>,
+        viewport: Size<Pixels>,
+        fitted: Size<Pixels>,
+    ) {
         let view = self.image_view_mut(original);
         view.pan = point(view.pan.x + delta.x, view.pan.y + delta.y);
-        view.pan = view.clamped_pan(viewport);
+        view.pan = view.clamped_pan(viewport, fitted);
     }
 
     pub fn begin_drag(&mut self, original: bool, mouse: Point<Pixels>) {
@@ -163,7 +179,13 @@ impl State {
         }
     }
 
-    pub fn drag_image(&mut self, original: bool, mouse: Point<Pixels>, viewport: Size<Pixels>) {
+    pub fn drag_image(
+        &mut self,
+        original: bool,
+        mouse: Point<Pixels>,
+        viewport: Size<Pixels>,
+        fitted: Size<Pixels>,
+    ) {
         let view = self.image_view_mut(original);
         let Some((start_mouse, start_pan)) = view.drag else {
             return;
@@ -172,7 +194,7 @@ impl State {
             start_pan.x + mouse.x - start_mouse.x,
             start_pan.y + mouse.y - start_mouse.y,
         );
-        view.pan = view.clamped_pan(viewport);
+        view.pan = view.clamped_pan(viewport, fitted);
     }
 
     pub fn end_drag(&mut self, original: bool) {
@@ -581,17 +603,28 @@ mod tests {
     use std::path::Path;
 
     #[test]
-    fn image_view_clamps_pan_to_zoom() {
+    fn image_view_clamps_pan_to_content_not_viewport() {
         let viewport = size(px(100.), px(80.));
         let view = ImageView {
             zoom: 2.,
             pan: point(px(999.), px(-999.)),
             ..ImageView::default()
         };
-        assert_eq!(view.clamped_pan(viewport), point(px(50.), px(-40.)));
+        // Content sized like the viewport at zoom 1 overflows both axes at 2x.
+        assert_eq!(
+            view.clamped_pan(viewport, viewport),
+            point(px(50.), px(-40.))
+        );
+
+        // A landscape image is letterboxed vertically, so it cannot pan vertically.
+        let fitted = size(px(100.), px(40.));
+        assert_eq!(view.clamped_pan(viewport, fitted), point(px(50.), px(0.)));
 
         let unzoomed = ImageView::default();
-        assert_eq!(unzoomed.clamped_pan(viewport), point(px(0.), px(0.)));
+        assert_eq!(
+            unzoomed.clamped_pan(viewport, viewport),
+            point(px(0.), px(0.))
+        );
     }
 
     #[test]
@@ -611,14 +644,14 @@ mod tests {
         };
 
         state.begin_drag(true, point(px(10.), px(10.)));
-        state.drag_image(true, point(px(30.), px(20.)), viewport);
+        state.drag_image(true, point(px(30.), px(20.)), viewport, viewport);
         assert_eq!(state.original_view.pan, point(px(20.), px(10.)));
 
-        state.drag_image(true, point(px(999.), px(-999.)), viewport);
+        state.drag_image(true, point(px(999.), px(-999.)), viewport, viewport);
         assert_eq!(state.original_view.pan, point(px(50.), px(-40.)));
 
         state.end_drag(true);
-        state.drag_image(true, point(px(0.), px(0.)), viewport);
+        state.drag_image(true, point(px(0.), px(0.)), viewport, viewport);
         assert_eq!(state.original_view.pan, point(px(50.), px(-40.)));
     }
 

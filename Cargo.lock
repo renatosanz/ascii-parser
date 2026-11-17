@@ -2255,6 +2255,7 @@ dependencies = [
  "gpui",
  "gpui_macros",
  "gpui_platform",
+ "image",
  "infer",
  "log",
  "open 3.2.0",

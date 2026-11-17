@@ -42,14 +42,15 @@ pub fn render(
     };
 
     let measured = viewport.unwrap_or_default();
-    let pan = view.clamped_pan(measured);
+    let fitted = fitted_size(source.as_deref(), measured);
+    let pan = view.clamped_pan(measured, fitted);
     let zoomed = view.zoom > 1.;
-    let width = measured.width * view.zoom;
-    let height = measured.height * view.zoom;
-    let left = measured.width * ((1. - view.zoom) / 2.) + pan.x;
-    let top = measured.height * ((1. - view.zoom) / 2.) + pan.y;
-    let (vertical_offset, vertical_size) = scroll_thumb(measured.height, view.zoom, pan.y);
-    let (horizontal_offset, horizontal_size) = scroll_thumb(measured.width, view.zoom, pan.x);
+    let content_width = fitted.width * view.zoom;
+    let content_height = fitted.height * view.zoom;
+    let left = (measured.width - content_width) / 2. + pan.x;
+    let top = (measured.height - content_height) / 2. + pan.y;
+    let vertical_bar = scroll_thumb(measured.height, content_height, pan.y);
+    let horizontal_bar = scroll_thumb(measured.width, content_width, pan.x);
     let has_source = source.is_some();
 
     let on_scroll = {
@@ -62,10 +63,10 @@ pub fn render(
             entity.update(cx, |state, cx| {
                 if delta.y != px(0.) {
                     let factor = (1. + f32::from(delta.y) / 250.).clamp(0.5, 2.);
-                    state.zoom_image(original, factor, measured);
+                    state.zoom_image(original, factor, measured, fitted);
                 }
                 if delta.x != px(0.) {
-                    state.pan_image(original, point(-delta.x, px(0.)), measured);
+                    state.pan_image(original, point(-delta.x, px(0.)), measured, fitted);
                 }
                 cx.notify();
             });
@@ -91,7 +92,7 @@ pub fn render(
                 return;
             }
             entity.update(cx, |state, cx| {
-                state.drag_image(original, event.position, measured);
+                state.drag_image(original, event.position, measured, fitted);
                 cx.notify();
             });
             cx.stop_propagation();
@@ -178,8 +179,8 @@ pub fn render(
                                     .absolute()
                                     .left(left)
                                     .top(top)
-                                    .w(width)
-                                    .h(height)
+                                    .w(content_width)
+                                    .h(content_height)
                                     .child(img(path).size_full().object_fit(ObjectFit::Contain))
                                     .into_any_element()
                             } else {
@@ -189,7 +190,7 @@ pub fn render(
                                     .into_any_element()
                             })
                         })
-                        .when(zoomed, |this| {
+                        .when_some(vertical_bar, |this, (offset, size)| {
                             this.child(
                                 div()
                                     .absolute()
@@ -202,15 +203,17 @@ pub fn render(
                                     .child(
                                         div()
                                             .absolute()
-                                            .top(relative(vertical_offset))
+                                            .top(relative(offset))
                                             .left(px(0.))
                                             .w_full()
-                                            .h(relative(vertical_size))
+                                            .h(relative(size))
                                             .rounded_full()
                                             .bg(rgb(ColorScheme::BorderStrong.into())),
                                     ),
                             )
-                            .child(
+                        })
+                        .when_some(horizontal_bar, |this, (offset, size)| {
+                            this.child(
                                 div()
                                     .absolute()
                                     .bottom(px(2.))
@@ -222,10 +225,10 @@ pub fn render(
                                     .child(
                                         div()
                                             .absolute()
-                                            .left(relative(horizontal_offset))
+                                            .left(relative(offset))
                                             .top(px(0.))
                                             .h_full()
-                                            .w(relative(horizontal_size))
+                                            .w(relative(size))
                                             .rounded_full()
                                             .bg(rgb(ColorScheme::BorderStrong.into())),
                                     ),
@@ -242,43 +245,54 @@ fn scroll_delta(delta: &ScrollDelta) -> Point<Pixels> {
     }
 }
 
-/// Returns the thumb offset and size as fractions of the scrollbar track.
-fn scroll_thumb(viewport: Pixels, zoom: f32, pan: Pixels) -> (f32, f32) {
-    let span = f32::from(viewport) * (zoom - 1.);
-    let fraction = if span > 0. {
-        (0.5 - f32::from(pan) / span).clamp(0., 1.)
-    } else {
-        0.
+/// Size the image is drawn at when fitted into `viewport` at zoom 1.
+fn fitted_size(source: Option<&std::path::Path>, viewport: Size<Pixels>) -> Size<Pixels> {
+    let Some((w, h)) = source.and_then(|path| image::image_dimensions(path).ok()) else {
+        return viewport;
     };
-    (fraction * (1. - 1. / zoom), 1. / zoom)
+    if w == 0 || h == 0 {
+        return viewport;
+    }
+    let scale = (f32::from(viewport.width) / w as f32).min(f32::from(viewport.height) / h as f32);
+    size(px(w as f32 * scale), px(h as f32 * scale))
+}
+
+/// Returns the thumb offset and size as fractions of the scrollbar track, or
+/// `None` when the content fits and no scrolling is possible.
+fn scroll_thumb(viewport: Pixels, content: Pixels, pan: Pixels) -> Option<(f32, f32)> {
+    let overflow = f32::from(content) - f32::from(viewport);
+    if overflow <= 0. {
+        return None;
+    }
+    let size = (f32::from(viewport) / f32::from(content)).clamp(0., 1.);
+    let offset = (0.5 - f32::from(pan) / overflow) * (1. - size);
+    Some((offset, size))
 }
 
 #[cfg(test)]
 mod tests {
     use super::scroll_thumb;
-    use gpui::{Pixels, px};
+    use gpui::px;
 
     #[test]
     fn scroll_thumb_tracks_pan() {
-        let (offset, size) = scroll_thumb(px(100.), 1., px(0.));
-        assert_eq!((offset, size), (0., 1.));
+        assert_eq!(scroll_thumb(px(100.), px(100.), px(0.)), None);
 
-        let (_, size) = scroll_thumb(px(100.), 2., px(0.));
+        let (_, size) = scroll_thumb(px(100.), px(200.), px(0.)).unwrap();
         assert!((size - 0.5).abs() < 1e-6);
 
-        let (offset, _) = scroll_thumb(px(100.), 2., px(50.));
-        assert!((offset - 0.).abs() < 1e-6);
+        let (offset, _) = scroll_thumb(px(100.), px(200.), px(-50.)).unwrap();
+        assert!((offset - 0.5).abs() < 1e-6);
 
-        let (offset, _) = scroll_thumb(px(100.), 2., px(0.));
+        let (offset, _) = scroll_thumb(px(100.), px(200.), px(0.)).unwrap();
         assert!((offset - 0.25).abs() < 1e-6);
 
-        let (offset, _) = scroll_thumb(px(100.), 2., px(-50.));
-        assert!((offset - 0.5).abs() < 1e-6);
+        let (offset, _) = scroll_thumb(px(100.), px(200.), px(50.)).unwrap();
+        assert!((offset - 0.).abs() < 1e-6);
     }
 
     #[test]
     fn scroll_thumb_is_stable_without_overflow() {
-        let (offset, size) = scroll_thumb(Pixels::ZERO, 1., px(0.));
-        assert_eq!((offset, size), (0., 1.));
+        assert_eq!(scroll_thumb(px(0.), px(0.), px(0.)), None);
     }
 }

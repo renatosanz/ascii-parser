@@ -16,6 +16,7 @@ simple_logger = "5.2.0"
 log = "0.4.35"
 open = "3"
 infer = "0.16"
+image = "0.25"
 
 [[bin]]
 name = "ascii-parser"
