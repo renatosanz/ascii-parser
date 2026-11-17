@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use gpui::prelude::FluentBuilder;
 use gpui::*;
 
@@ -46,26 +48,39 @@ impl Input {
 }
 
 impl RenderOnce for Input {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let focus_handle = self.focus_handle.clone();
+        let focused = focus_handle.is_focused(window);
+        let caret_id = ElementId::Name(format!("{}-caret", self.id).into());
+        let is_empty = self.value.is_empty();
         let value_for_keys = self.value.clone();
         let on_change = self.on_change;
         let disabled = self.disabled;
+        let background_color = if disabled {
+            ColorScheme::BgSurfaceHover
+        } else {
+            ColorScheme::BgSurface
+        };
+        let text_color = if disabled {
+            ColorScheme::TextMuted
+        } else {
+            ColorScheme::TextPrimary
+        };
 
         div()
             .id(self.id)
             .flex()
             .items_center()
-            .h(px(36.))
+            .h(px(34.))
             .px_3()
             .overflow_hidden()
             .whitespace_nowrap()
             .rounded_md()
             .border_1()
             .border_color(rgb(ColorScheme::BorderSubtle.into()))
-            .bg(rgb(ColorScheme::BgSurface.into()))
+            .bg(rgb(background_color.into()))
             .text_sm()
-            .when(disabled, |this| this.opacity(0.5))
+            .text_color(rgb(text_color.into()))
             .track_focus(&focus_handle)
             .focus(|style| style.border_color(rgb(ColorScheme::BorderBrand.into())))
             .on_mouse_down(MouseButton::Left, move |_, window, cx| {
@@ -100,13 +115,38 @@ impl RenderOnce for Input {
 
                 on_change(&text, window, cx);
             })
-            .when(self.value.is_empty(), |this| {
-                this.child(
-                    div()
-                        .text_color(rgb(ColorScheme::TextMuted.into()))
-                        .child(self.placeholder),
-                )
-            })
-            .when(!self.value.is_empty(), |this| this.child(self.value))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .w_full()
+                    .min_w_0()
+                    .when(!is_empty, |this| {
+                        this.child(div().flex_1().min_w_0().overflow_hidden().child(self.value))
+                    })
+                    .when(is_empty, |this| {
+                        this.child(
+                            div()
+                                .text_color(rgb(ColorScheme::TextMuted.into()))
+                                .child(self.placeholder),
+                        )
+                    })
+                    .when(focused, |this| {
+                        this.child(
+                            div()
+                                .w(px(1.5))
+                                .h(px(16.))
+                                .flex_shrink_0()
+                                .bg(rgb(ColorScheme::TextPrimary.into()))
+                                .with_animation(
+                                    caret_id,
+                                    Animation::new(Duration::from_millis(1060))
+                                        .repeat()
+                                        .with_max_fps(4.),
+                                    |caret, delta| caret.opacity(if delta < 0.5 { 1. } else { 0. }),
+                                ),
+                        )
+                    }),
+            )
     }
 }
