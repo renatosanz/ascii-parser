@@ -2,12 +2,19 @@ use gpui::{prelude::FluentBuilder, *};
 
 use crate::colorscheme::ColorScheme;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ButtonVariant {
+    Primary,
+    Secondary,
+}
+
 #[derive(IntoElement)]
 pub struct Button {
     id: ElementId,
     label: SharedString,
     on_click: Option<Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
     disabled: bool,
+    variant: ButtonVariant,
 }
 
 impl Button {
@@ -17,8 +24,15 @@ impl Button {
             label,
             on_click: None,
             disabled: false,
+            variant: ButtonVariant::Primary,
         }
     }
+
+    pub fn secondary(mut self) -> Self {
+        self.variant = ButtonVariant::Secondary;
+        self
+    }
+
     pub fn on_click(
         mut self,
         handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
@@ -26,6 +40,7 @@ impl Button {
         self.on_click = Some(Box::new(handler));
         self
     }
+
     pub fn disabled(mut self, value: bool) -> Self {
         self.disabled = value;
         self
@@ -34,38 +49,58 @@ impl Button {
 
 impl RenderOnce for Button {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        let border_color = match self.disabled {
-            false => ColorScheme::BorderBrand.into(),
-            true => ColorScheme::ColorGreen100.into(),
+        let disabled = self.disabled;
+        let variant = self.variant;
+
+        let background_color = match (variant, disabled) {
+            (_, true) => ColorScheme::ColorGray100,
+            (ButtonVariant::Primary, false) => ColorScheme::BgBrand,
+            (ButtonVariant::Secondary, false) => ColorScheme::BgSurface,
         };
-        let background_color = match self.disabled {
-            false => ColorScheme::ColorGreen100.into(),
-            true => ColorScheme::ColorGray100.into(),
+        let text_color = match disabled {
+            true => ColorScheme::TextMuted,
+            false => match variant {
+                ButtonVariant::Primary => ColorScheme::TextOnBrand,
+                ButtonVariant::Secondary => ColorScheme::TextPrimary,
+            },
+        };
+        let border_color = match (variant, disabled) {
+            (ButtonVariant::Secondary, false) => Some(ColorScheme::BorderSubtle),
+            _ => None,
         };
 
         div()
             .id(self.id)
             .flex()
+            .items_center()
             .justify_center()
-            .text_lg()
-            .border_2()
-            .p_1()
-            .rounded_lg()
-            .border_color(rgb(border_color))
-            .text_color(rgb(ColorScheme::TextPrimary.into()))
-            .bg(rgb(background_color))
+            .h(px(34.))
+            .px_4()
+            .rounded_md()
+            .text_sm()
+            .font_weight(FontWeight::MEDIUM)
+            .text_color(rgb(text_color.into()))
+            .bg(rgb(background_color.into()))
+            .when_some(border_color, |this, color| {
+                this.border_1().border_color(rgb(color.into()))
+            })
             .hover(|style| {
-                if !self.disabled {
-                    style.bg(rgb(ColorScheme::ColorGreen300.into()))
-                } else {
+                if disabled {
                     style
+                } else {
+                    match variant {
+                        ButtonVariant::Primary => style.bg(rgb(ColorScheme::BgBrandHover.into())),
+                        ButtonVariant::Secondary => {
+                            style.bg(rgb(ColorScheme::BgSurfaceHover.into()))
+                        }
+                    }
                 }
             })
             .when_some(self.on_click, |this, on_click| {
-                if !self.disabled {
-                    this.on_click(move |evt, window, cx| (on_click)(evt, window, cx))
-                } else {
+                if disabled {
                     this
+                } else {
+                    this.on_click(move |evt, window, cx| (on_click)(evt, window, cx))
                 }
             })
             .child(self.label)

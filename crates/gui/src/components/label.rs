@@ -25,13 +25,13 @@ impl Label {
 impl RenderOnce for Label {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let color = if self.muted {
-            ColorScheme::TextSecondary
+            ColorScheme::TextMuted
         } else {
-            ColorScheme::TextPrimary
+            ColorScheme::TextSecondary
         };
 
         div()
-            .text_sm()
+            .text_xs()
             .font_weight(FontWeight::MEDIUM)
             .text_color(rgb(color.into()))
             .child(self.text)

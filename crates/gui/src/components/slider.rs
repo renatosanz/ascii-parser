@@ -87,7 +87,7 @@ impl RenderOnce for Slider {
         div()
             .id(self.id)
             .relative()
-            .h(px(20.))
+            .h(px(16.))
             .w_full()
             .when(disabled, |this| this.opacity(0.5))
             .child(
@@ -103,7 +103,17 @@ impl RenderOnce for Slider {
                     .absolute()
                     .top(px(6.))
                     .left_0()
-                    .h(px(8.))
+                    .h(px(4.))
+                    .w_full()
+                    .rounded_full()
+                    .bg(rgb(ColorScheme::BorderSubtle.into())),
+            )
+            .child(
+                div()
+                    .absolute()
+                    .top(px(6.))
+                    .left_0()
+                    .h(px(4.))
                     .w(relative(fraction))
                     .rounded_full()
                     .bg(rgb(ColorScheme::BgBrand.into())),
@@ -111,14 +121,14 @@ impl RenderOnce for Slider {
             .child(
                 div()
                     .absolute()
-                    .top(px(3.))
+                    .top(px(0.))
                     .left(relative(fraction))
-                    .ml(px(-7.))
-                    .size(px(14.))
+                    .ml(px(-8.))
+                    .size(px(16.))
                     .rounded_full()
                     .border_2()
-                    .border_color(rgb(ColorScheme::BgBrand.into()))
-                    .bg(rgb(ColorScheme::BgSurface.into())),
+                    .border_color(rgb(ColorScheme::BgSurface.into()))
+                    .bg(rgb(ColorScheme::BgBrand.into())),
             )
             .on_mouse_down(MouseButton::Left, on_down)
             // shortcut: drag tracking stops when the pointer leaves the track
