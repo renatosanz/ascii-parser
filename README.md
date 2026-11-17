@@ -1,10 +1,10 @@
-# ascii-parser
+# ascii-parser (v0.1.0)
 
 A Rust image parser that converts images into ASCII characters, producing both plain-text output and rendered PNG images.
 
 > **Project scope:** This repository focuses on two projects:
 > - `ascii-parser-cli` — the command-line interface, available now
-> - `ascii-parser` — a GUI application, coming soon
+> - `ascii-parser` — a GUI application, available now
 
 > **NOTE:** For best results, prefer JPEG input. Images with transparency (some PNGs) may produce unexpected output.
 
@@ -45,6 +45,15 @@ cargo install --path crates/cli
 ```
 
 This installs the `ascii-parser-cli` binary.
+
+### Build the GUI
+
+```bash
+cargo build --release -p gui
+./target/release/ascii-parser
+```
+
+This builds the `ascii-parser` GUI binary.
 
 ## Usage
 
@@ -167,10 +176,11 @@ Supported shells: `bash`, `elvish`, `fish`, `power-shell`, `zsh`.
 ```text
 crates/
 ├── base/   # Core library: reduction, text conversion, and rendering
-└── cli/    # Command-line interface (ascii-parser-cli binary)
+├── cli/    # Command-line interface (ascii-parser-cli binary)
+└── gui/     # Desktop GUI (ascii-parser binary)
 ```
 
-See [`crates/base/README.md`](crates/base/README.md) and [`crates/cli/README.md`](crates/cli/README.md) for crate-level details.
+See [`crates/base/README.md`](crates/base/README.md), [`crates/cli/README.md`](crates/cli/README.md), and [`crates/gui/README.md`](crates/gui/README.md) for crate-level details.
 
 ## Development
 

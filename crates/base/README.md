@@ -4,7 +4,7 @@ Core library for [`ascii-parser`](../../README.md). It loads an image, reduces i
 
 > **Project scope:** This repository focuses on two projects:
 > - `ascii-parser-cli` — the command-line interface, available now
-> - `ascii-parser` — a GUI application, coming soon
+> - `ascii-parser` — a GUI application, available now
 
 This crate is an internal workspace library and is not published.
 

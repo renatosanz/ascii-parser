@@ -4,7 +4,7 @@ Command-line interface for [`ascii-parser`](../../README.md). It wraps the `base
 
 > **Project scope:** This repository focuses on two projects:
 > - `ascii-parser-cli` — the command-line interface (this crate), available now
-> - `ascii-parser` — a GUI application, coming soon
+> - `ascii-parser` — a GUI application, available now
 
 The Cargo package is named `cli`; the generated binary is `ascii-parser-cli`.
 
