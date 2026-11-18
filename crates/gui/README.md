@@ -23,6 +23,16 @@ cargo build --release -p gui
 ./target/release/ascii-parser
 ```
 
+### Platform support
+
+The source builds and runs on Linux, macOS, and Windows.
+
+- **Linux:** the GUI needs a Wayland or X11 session.
+- **macOS:** install the Xcode Command Line Tools (`xcode-select --install`).
+- **Windows:** use the default MSVC toolchain (Visual Studio Build Tools are installed automatically by `rustup`).
+
+The binary is `ascii-parser` on Linux and macOS, and `ascii-parser.exe` on Windows.
+
 ## Features
 
 - Pick an input image and preview the original and rendered ASCII side by side.
