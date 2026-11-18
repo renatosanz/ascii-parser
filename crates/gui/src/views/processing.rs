@@ -378,25 +378,27 @@ fn display_path(path: &str, empty_label: &'static str) -> Div {
 }
 
 pub(crate) fn short_path(path: &str) -> String {
-    collapse_home(
-        path,
-        std::env::var_os("HOME")
-            .map(std::path::PathBuf::from)
-            .as_deref(),
-    )
+    collapse_home(path, home_dir().as_deref())
+}
+
+fn home_dir() -> Option<std::path::PathBuf> {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(std::path::PathBuf::from)
 }
 
 fn collapse_home(path: &str, home: Option<&std::path::Path>) -> String {
-    let Some(home) = home.and_then(|home| home.to_str()) else {
+    let Some(home) = home else {
         return path.to_string();
     };
-    let home = home.trim_end_matches('/');
-    if path == home {
-        "~".to_string()
-    } else if let Some(rest) = path.strip_prefix(home).filter(|rest| rest.starts_with('/')) {
-        format!("~{rest}")
-    } else {
-        path.to_string()
+    let path = std::path::Path::new(path);
+    match path.strip_prefix(home) {
+        Ok(rest) if rest.as_os_str().is_empty() => "~".to_string(),
+        Ok(rest) => std::path::Path::new("~")
+            .join(rest)
+            .to_string_lossy()
+            .into_owned(),
+        Err(_) => path.to_string_lossy().into_owned(),
     }
 }
 
@@ -416,16 +418,28 @@ mod tests {
 
     #[test]
     fn collapse_home_to_tilde() {
-        let home = Path::new("/home/renato");
+        let home = Path::new("home").join("renato");
+        let inside = home.join("img").join("out.txt");
+        let outside = Path::new("tmp").join("out.txt");
+        let sibling = Path::new("home").join("renato2").join("out.txt");
+        let collapsed = Path::new("~")
+            .join("img")
+            .join("out.txt")
+            .to_string_lossy()
+            .into_owned();
+
         assert_eq!(
-            collapse_home("/home/renato/img/out.txt", Some(home)),
-            "~/img/out.txt"
+            collapse_home(&inside.to_string_lossy(), Some(&home)),
+            collapsed
         );
-        assert_eq!(collapse_home("/home/renato", Some(home)), "~");
-        assert_eq!(collapse_home("/tmp/out.txt", Some(home)), "/tmp/out.txt");
+        assert_eq!(collapse_home(&home.to_string_lossy(), Some(&home)), "~");
         assert_eq!(
-            collapse_home("/home/renato2/out.txt", Some(home)),
-            "/home/renato2/out.txt"
+            collapse_home(&outside.to_string_lossy(), Some(&home)),
+            outside.to_string_lossy()
+        );
+        assert_eq!(
+            collapse_home(&sibling.to_string_lossy(), Some(&home)),
+            sibling.to_string_lossy()
         );
     }
 }
