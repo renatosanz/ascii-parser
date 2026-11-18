@@ -600,7 +600,6 @@ fn output_is_writable(path: &Path) -> Result<(), std::io::Error> {
 mod tests {
     use super::{ImageView, ProcessingConfig, State, output_is_writable};
     use gpui::{point, px, size};
-    use std::path::Path;
 
     #[test]
     fn image_view_clamps_pan_to_content_not_viewport() {
@@ -662,9 +661,9 @@ mod tests {
             std::process::id()
         ));
         assert!(output_is_writable(&target).is_ok());
-        assert!(
-            output_is_writable(Path::new("/ascii-parser-missing-dir-for-test/output.png")).is_err()
-        );
+        let missing =
+            std::env::temp_dir().join(format!("ascii-parser-missing-dir-{}", std::process::id()));
+        assert!(output_is_writable(&missing.join("output.png")).is_err());
     }
 
     #[cfg(unix)]

@@ -39,13 +39,21 @@ fn setup(test_name: &str, cleanup: bool) -> Result<TestGuard, std::io::Error> {
     // tests can run in parallel without deleting each other's files.
     println!("Setup: Preparing for the test.");
 
-    let test_dir = Path::new("/tmp/ascii-parser-test").join(test_name);
+    let test_dir = std::env::temp_dir()
+        .join("ascii-parser-test")
+        .join(test_name);
     if test_dir.exists() {
         fs::remove_dir_all(&test_dir)?;
     }
     fs::create_dir_all(&test_dir)?;
 
     Ok(TestGuard { cleanup, test_dir })
+}
+
+fn test_image(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("test")
+        .join(name)
 }
 
 fn assert_approx_eq(actual: f32, expected: f32) {
@@ -59,7 +67,7 @@ fn assert_approx_eq(actual: f32, expected: f32) {
 pub fn image_reduction_test_square_ratio() -> Result<(), Box<dyn std::error::Error>> {
     let _guard = setup("image_reduction_square_ratio", true)?;
 
-    let img = image::open("./test/bic.jpg")?; // open image
+    let img = image::open(test_image("bic.jpg"))?; // open image
     let (original_w, original_h) = img.dimensions();
     assert!(original_w > 0, "source image should have a width");
     assert!(original_h > 0, "source image should have a height");
@@ -67,7 +75,7 @@ pub fn image_reduction_test_square_ratio() -> Result<(), Box<dyn std::error::Err
     let max_dim = 200;
     let img_reducted = reductor::adaptative_reduction(&img, max_dim, 1 as f32); //reduce it
 
-    // save it in the /tmp/ascii-parser dir
+    // save it in the temporary test directory
     let image_path = _guard.path("reduction_square.jpg");
     img_reducted.save(&image_path)?;
 
@@ -103,7 +111,7 @@ pub fn image_reduction_test_square_ratio() -> Result<(), Box<dyn std::error::Err
 pub fn image_reduction_test_rectangle_ratio() -> Result<(), Box<dyn std::error::Error>> {
     let _guard = setup("image_reduction_test_rectangle_ratio", true)?;
 
-    let img = image::open("./test/bg1.jpg")?; // open image
+    let img = image::open(test_image("bg1.jpg"))?; // open image
     let (original_w, original_h) = img.dimensions();
     assert!(original_w > 0, "source image should have a width");
     assert!(original_h > 0, "source image should have a height");
@@ -112,7 +120,7 @@ pub fn image_reduction_test_rectangle_ratio() -> Result<(), Box<dyn std::error::
     let font_ratio = 0.5;
     let img_reducted = reductor::adaptative_reduction(&img, max_dim, font_ratio); //reduce it
 
-    // save it in the /tmp/ascii-parser dir
+    // save it in the temporary test directory
     let image_path = _guard.path("reduction_rectagle.jpg");
     img_reducted.save(&image_path)?;
 
@@ -142,10 +150,10 @@ pub fn image_reduction_test_rectangle_ratio() -> Result<(), Box<dyn std::error::
 pub fn export_reducted_rectangle_image_test() -> Result<(), Box<dyn std::error::Error>> {
     let _guard = setup("export_reducted_rectangle_image_test", true)?;
 
-    let img = image::open("./test/bg1.jpg")?; // open image
+    let img = image::open(test_image("bg1.jpg"))?; // open image
 
     let img_reducted = reductor::adaptative_reduction(&img, 200, 1 as f32); //reduce it
-    // save it in the /tmp/ascii-parser dir
+    // save it in the temporary test directory
     let image_path = _guard.path("reduction_rectagle.jpg");
     img_reducted.save(&image_path)?;
 
@@ -194,10 +202,10 @@ pub fn export_reducted_rectangle_image_test() -> Result<(), Box<dyn std::error::
 pub fn export_reducted_square_image_test() -> Result<(), Box<dyn std::error::Error>> {
     let _guard = setup("export_reducted_square_image_test", true)?;
 
-    let img = image::open("./test/bic.jpg")?; // open image
+    let img = image::open(test_image("bic.jpg"))?; // open image
 
     let img_reducted = reductor::adaptative_reduction(&img, 200, 1 as f32); //reduce it
-    // save it in the /tmp/ascii-parser dir
+    // save it in the temporary test directory
     let image_path = _guard.path("square_rectagle.jpg");
     img_reducted.save(&image_path)?;
 
@@ -250,10 +258,10 @@ pub fn render_reducted_ascii_image_test() -> Result<(), Box<dyn std::error::Erro
     assert!(ratio > 0.0, "font ratio should be positive");
     assert_approx_eq(ratio, advance / line_height);
 
-    let img = image::open("./test/angel.jpg")?; // open image
+    let img = image::open(test_image("angel.jpg"))?; // open image
     let img_reducted = reductor::adaptative_reduction(&img, 400, ratio); //reduce it
 
-    // save it in the /tmp/ascii-parser dir
+    // save it in the temporary test directory
     let image_path = _guard.path("square_rectagle.jpg");
     img_reducted.save(&image_path)?;
 
